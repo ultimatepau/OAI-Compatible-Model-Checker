@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Checker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 2rem; }
+  h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #58a6ff; }
+  .form-group { margin-bottom: 1rem; }
+  label { display: block; font-size: 0.85rem; margin-bottom: 0.3rem; color: #8b949e; }
+  input, textarea { width: 100%; max-width: 600px; padding: 0.5rem 0.75rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 0.9rem; }
+  input:focus, textarea:focus { outline: none; border-color: #58a6ff; }
+  textarea { resize: vertical; height: 60px; }
+  .row { display: flex; gap: 1rem; max-width: 600px; }
+  .row .form-group { flex: 1; }
+  button { padding: 0.6rem 1.5rem; background: #238636; color: #fff; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; margin-top: 0.5rem; }
+  button:hover { background: #2ea043; }
+  button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+  button.secondary { background: #30363d; }
+  button.secondary:hover { background: #484f58; }
+  button.danger { background: #da3633; }
+  button.danger:hover { background: #f85149; }
+  .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #30363d; }
+  .tab { padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.9rem; color: #8b949e; border-bottom: 2px solid transparent; }
+  .tab:hover { color: #c9d1d9; }
+  .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .section-title { font-size: 1rem; color: #c9d1d9; margin: 1.5rem 0 0.75rem; }
+  .config-models { display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: 900px; margin-top: 0.5rem; }
+  .config-model-tag { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.5rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; font-size: 0.8rem; }
+  .config-model-tag .remove { cursor: pointer; color: #f85149; font-weight: bold; margin-left: 0.2rem; }
+  .config-model-tag .remove:hover { color: #ff7b72; }
+  .add-model-row { display: flex; gap: 0.5rem; max-width: 500px; margin-top: 0.75rem; }
+  .add-model-row input { flex: 1; }
+  .add-model-row button { margin-top: 0; padding: 0.5rem 1rem; }
+  select { padding: 0.5rem 0.75rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 0.9rem; }
+  select:focus { outline: none; border-color: #58a6ff; }
+  .sync-bar { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; align-items: center; }
+  .sync-bar select { padding: 0.5rem 0.75rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 0.85rem; }
+  .config-info { font-size: 0.8rem; color: #8b949e; margin-top: 0.5rem; }
+  #config-status { margin-top: 0.5rem; font-size: 0.85rem; min-height: 1.2em; }
+  #progress { margin: 1rem 0; font-size: 0.85rem; color: #8b949e; min-height: 1.2em; }
+  .summary { margin: 0.5rem 0 1rem; font-size: 0.9rem; color: #8b949e; }
+  .summary .active { color: #3fb950; font-weight: 600; }
+  .summary .inactive { color: #f85149; font-weight: 600; }
+  table { width: 100%; max-width: 900px; border-collapse: collapse; margin-top: 0.5rem; }
+  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #21262d; font-size: 0.85rem; }
+  th { color: #8b949e; font-weight: 600; position: sticky; top: 0; background: #0d1117; }
+  tr:hover { background: #161b22; }
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+  .badge.active { background: #238636; color: #fff; }
+  .badge.inactive { background: #da3633; color: #fff; }
+  .error-text { color: #f85149; font-size: 0.8rem; max-width: 350px; word-break: break-all; }
+  td.col-json { max-width: 300px; }
+  .json-toggle { cursor: pointer; color: #58a6ff; font-size: 0.8rem; user-select: none; }
+  .json-toggle:hover { text-decoration: underline; }
+  .json-block { display: none; margin-top: 0.3rem; padding: 0.4rem; background: #0d1117; border: 1px solid #21262d; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.75rem; color: #8b949e; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
+  .json-block.open { display: block; }
+</style>
+</head>
+<body>
+<h1>🔍 Model Checker</h1>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('checker')">Check Models</div>
+  <div class="tab" onclick="switchTab('config')">Config Manager</div>
+</div>
+
+<!-- Checker Panel -->
+<div id="panel-checker" class="panel active">
+  <div class="form-group">
+    <label for="provider-select">Provider (from opencode config)</label>
+    <div style="display:flex;gap:0.5rem;max-width:600px;">
+      <select id="provider-select" onchange="onProviderChange()" style="flex:0 0 auto;min-width:160px;"></select>
+      <input type="text" id="endpoint" placeholder="https://api.openai.com" style="flex:1;" />
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="api_key">API Key</label>
+    <input type="password" id="api_key" placeholder="sk-..." />
+  </div>
+  <div class="row">
+    <div class="form-group">
+      <label for="prompt">Test Prompt</label>
+      <textarea id="prompt">hi</textarea>
+    </div>
+    <div class="form-group">
+      <label for="max_tokens">Max Tokens</label>
+      <input type="number" id="max_tokens" value="10" min="1" max="100" />
+    </div>
+  </div>
+  <button id="checkBtn" onclick="startCheck()">Check Models</button>
+  <div id="progress"></div>
+  <div id="summary" class="summary"></div>
+  <table>
+    <thead>
+      <tr><th>Model</th><th>Status</th><th>Latency</th><th>Request</th><th>Response</th><th>Error</th></tr>
+    </thead>
+    <tbody id="results"></tbody>
+  </table>
+</div>
+
+<!-- Config Panel -->
+<div id="panel-config" class="panel">
+  <div id="config-status"></div>
+  <div id="config-loading">Loading config...</div>
+  <div id="config-content" style="display:none">
+    <p class="config-info">Editing: <code>~/.config/opencode/opencode.json</code></p>
+
+    <div class="section-title">Provider</div>
+    <div class="form-group" style="max-width:300px">
+      <select id="config-provider" onchange="renderConfigModels()"></select>
+    </div>
+
+    <div class="section-title">Models</div>
+    <div id="config-models" class="config-models"></div>
+
+    <div class="add-model-row">
+      <input type="text" id="new-model-id" placeholder="new-model-id" />
+      <button class="secondary" onclick="addConfigModel()">+ Add</button>
+    </div>
+
+    <div class="section-title">Sync from Checker</div>
+    <p class="config-info">After running a check, sync the results into your config.</p>
+    <div class="sync-bar">
+      <select id="sync-mode">
+        <option value="merge">Merge — add active models only</option>
+        <option value="replace">Replace — remove inactive models too</option>
+      </select>
+      <button onclick="syncResultsToConfig()">Sync Results → Config</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let checkResults = []; // stored for config sync
+let configData = null;
+let configProviders = [];
+let configEndpoints = []; // [{name, baseURL}]
+let currentProvider = "9router";
+
+const tbody = document.getElementById("results");
+const progress = document.getElementById("progress");
+const summary = document.getElementById("summary");
+const checkBtn = document.getElementById("checkBtn");
+
+// ── Init: load providers on page load ──────────────────────────────────
+(async function init() {
+  try {
+    const resp = await fetch("/api/config");
+    const data = await resp.json();
+    if (data.ok) {
+      configEndpoints = data.endpoints || [];
+      const sel = document.getElementById("provider-select");
+      sel.innerHTML = '<option value="">— manual —</option>' +
+        configEndpoints.map(e => `<option value="${esc(e.name)}">${esc(e.name)}${e.baseURL ? ' — ' + esc(e.baseURL) : ''}</option>`).join("");
+      // Auto-select the first provider that has a baseURL
+      const withBase = configEndpoints.find(e => e.baseURL);
+      if (withBase) {
+        sel.value = withBase.name;
+        document.getElementById("endpoint").value = withBase.baseURL;
+      }
+    }
+  } catch {}
+})();
+
+function onProviderChange() {
+  const name = document.getElementById("provider-select").value;
+  if (!name) return;
+  const ep = configEndpoints.find(e => e.name === name);
+  if (ep && ep.baseURL) {
+    document.getElementById("endpoint").value = ep.baseURL;
+  }
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add("active");
+  document.getElementById(`panel-${name}`).classList.add("active");
+  if (name === "config") loadConfig();
+}
+
+// ── Model Checker ──────────────────────────────────────────────────────
+async function startCheck() {
+  const endpoint = document.getElementById("endpoint").value.trim();
+  const api_key = document.getElementById("api_key").value.trim();
+  const prompt = document.getElementById("prompt").value.trim() || "hi";
+  const max_tokens = parseInt(document.getElementById("max_tokens").value) || 10;
+
+  if (!endpoint) { alert("Please enter an endpoint URL"); return; }
+
+  tbody.innerHTML = "";
+  summary.innerHTML = "";
+  progress.textContent = "Fetching models...";
+  checkBtn.disabled = true;
+
+  let activeCount = 0;
+  let inactiveCount = 0;
+  checkResults = [];
+
+  try {
+    const resp = await fetch("/api/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint, api_key, prompt, max_tokens }),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const json = line.slice(6).trim();
+        if (!json) continue;
+        let msg;
+        try { msg = JSON.parse(json); } catch { continue; }
+
+        if (msg.type === "models") {
+          progress.textContent = `Found ${msg.data.length} models. Testing...`;
+        } else if (msg.type === "result") {
+          if (msg.status === "active") activeCount++; else inactiveCount++;
+          progress.textContent = `Testing ${msg.progress}...`;
+          checkResults.push(msg);
+          renderRows(checkResults);
+        } else if (msg.type === "error") {
+          progress.textContent = `Error: ${msg.error}`;
+        } else if (msg.type === "done") {
+          progress.textContent = "Done!";
+          summary.innerHTML = `<span class="active">${activeCount} active</span> · <span class="inactive">${inactiveCount} inactive</span> · ${checkResults.length} total`;
+        }
+      }
+    }
+  } catch (e) {
+    progress.textContent = `Request failed: ${e.message}`;
+  }
+
+  checkBtn.disabled = false;
+}
+
+function renderRows(results) {
+  const sorted = [...results].sort((a, b) => {
+    if (a.status !== b.status) return a.status === "active" ? -1 : 1;
+    return a.latency_ms - b.latency_ms;
+  });
+
+  tbody.innerHTML = sorted.map((r, i) => `
+    <tr>
+      <td>${esc(r.model)}</td>
+      <td><span class="badge ${r.status}">${r.status === "active" ? "✓ Active" : "✗ Inactive"}</span></td>
+      <td>${r.latency_ms}ms</td>
+      <td class="col-json">
+        <span class="json-toggle" onclick="toggleJson('req-${i}')">▶ payload</span>
+        <div id="req-${i}" class="json-block">${esc(formatJson(r.request))}</div>
+      </td>
+      <td class="col-json">
+        <span class="json-toggle" onclick="toggleJson('res-${i}')">▶ body</span>
+        <div id="res-${i}" class="json-block">${esc(formatJson(r.response))}</div>
+      </td>
+      <td class="error-text">${r.error ? esc(r.error) : "—"}</td>
+    </tr>
+  `).join("");
+}
+
+function toggleJson(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle("open");
+  const toggle = el.previousElementSibling;
+  toggle.textContent = el.classList.contains("open") ? "▼" : "▶" + toggle.textContent.slice(1);
+}
+
+function formatJson(val) {
+  if (!val) return "—";
+  if (typeof val === "string") {
+    try { return JSON.stringify(JSON.parse(val), null, 2); } catch { return val; }
+  }
+  return JSON.stringify(val, null, 2);
+}
+
+// ── Config Manager ─────────────────────────────────────────────────────
+async function loadConfig() {
+  const status = document.getElementById("config-status");
+  const loading = document.getElementById("config-loading");
+  const content = document.getElementById("config-content");
+
+  status.textContent = "";
+  loading.style.display = "";
+  content.style.display = "none";
+
+  try {
+    const resp = await fetch("/api/config");
+    const data = await resp.json();
+    if (!data.ok) { loading.textContent = `Error: ${data.error}`; return; }
+
+    configData = data.config;
+    configProviders = data.providers;
+
+    // Populate provider dropdown
+    const sel = document.getElementById("config-provider");
+    sel.innerHTML = configProviders.map(p =>
+      `<option value="${esc(p)}" ${p === currentProvider ? "selected" : ""}>${esc(p)}</option>`
+    ).join("");
+
+    // Pre-select 9router if exists
+    if (configProviders.includes("9router")) {
+      currentProvider = "9router";
+      sel.value = "9router";
+    } else if (configProviders.length > 0) {
+      currentProvider = configProviders[0];
+      sel.value = currentProvider;
+    }
+
+    loading.style.display = "none";
+    content.style.display = "";
+    renderConfigModels();
+  } catch (e) {
+    loading.textContent = `Failed to load: ${e.message}`;
+  }
+}
+
+function renderConfigModels() {
+  const provider = document.getElementById("config-provider").value;
+  currentProvider = provider;
+  const models = configData?.provider?.[provider]?.models || {};
+  const container = document.getElementById("config-models");
+
+  const sorted = Object.keys(models).sort();
+  container.innerHTML = sorted.map(id => `
+    <span class="config-model-tag">
+      ${esc(id)}
+      <span class="remove" onclick="removeConfigModel('${esc(id)}')" title="Remove">×</span>
+    </span>
+  `).join("");
+
+  if (sorted.length === 0) {
+    container.innerHTML = '<span class="config-info">No models configured for this provider.</span>';
+  }
+}
+
+async function addConfigModel() {
+  const input = document.getElementById("new-model-id");
+  const modelId = input.value.trim();
+  if (!modelId) return;
+
+  const status = document.getElementById("config-status");
+  try {
+    const resp = await fetch("/api/config/models", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add", model_id: modelId, provider: currentProvider }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      status.textContent = `✓ ${data.message}`;
+      status.style.color = "#3fb950";
+      input.value = "";
+      await loadConfig();
+    } else {
+      status.textContent = `✗ ${data.error}`;
+      status.style.color = "#f85149";
+    }
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.style.color = "#f85149";
+  }
+}
+
+async function removeConfigModel(modelId) {
+  const status = document.getElementById("config-status");
+  try {
+    const resp = await fetch("/api/config/models", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove", model_id: modelId, provider: currentProvider }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      status.textContent = `✓ ${data.message}`;
+      status.style.color = "#3fb950";
+      await loadConfig();
+    } else {
+      status.textContent = `✗ ${data.error}`;
+      status.style.color = "#f85149";
+    }
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.style.color = "#f85149";
+  }
+}
+
+async function syncResultsToConfig() {
+  const status = document.getElementById("config-status");
+  if (checkResults.length === 0) {
+    status.textContent = "No check results to sync. Run a check first.";
+    status.style.color = "#f85149";
+    return;
+  }
+
+  const mode = document.getElementById("sync-mode").value;
+  const active = checkResults.filter(r => r.status === "active").map(r => r.model);
+  const inactive = checkResults.filter(r => r.status === "inactive").map(r => r.model);
+
+  try {
+    const resp = await fetch("/api/config/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active, inactive, provider: currentProvider, mode }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      status.textContent = `✓ Synced! Added: ${data.added.length}, Removed: ${data.removed.length}, Total: ${data.total}`;
+      status.style.color = "#3fb950";
+      await loadConfig();
+    } else {
+      status.textContent = `✗ ${data.error}`;
+      status.style.color = "#f85149";
+    }
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.style.color = "#f85149";
+  }
+}
+
+// Allow Enter key in the add-model input
+document.getElementById("new-model-id").addEventListener("keydown", e => {
+  if (e.key === "Enter") addConfigModel();
+});
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
