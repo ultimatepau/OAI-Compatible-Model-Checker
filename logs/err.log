@@ -1,0 +1,554 @@
+2026-06-21 13:44:43: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-21 13:44:43: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-21 13:44:43: INFO:     Started reloader process [99073] using StatReload
+2026-06-21 13:44:43: Process SpawnProcess-1:
+2026-06-21 13:44:43: Traceback (most recent call last):
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-21 13:44:43:     self.run()
+2026-06-21 13:44:43:     ~~~~~~~~^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-21 13:44:43:     self._target(*self._args, **self._kwargs)
+2026-06-21 13:44:43:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-21 13:44:43:     target(sockets=sockets)
+2026-06-21 13:44:43:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-21 13:44:43:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-21 13:44:43:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-21 13:44:43:     return runner.run(main)
+2026-06-21 13:44:43:            ~~~~~~~~~~^^^^^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-21 13:44:43:     return self._loop.run_until_complete(task)
+2026-06-21 13:44:43:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-21 13:44:43:     return future.result()
+2026-06-21 13:44:43:            ~~~~~~~~~~~~~^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-21 13:44:43:     await self._serve(sockets)
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-21 13:44:43:     config.load()
+2026-06-21 13:44:43:     ~~~~~~~~~~~^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-21 13:44:43:     self.loaded_app = import_from_string(self.app)
+2026-06-21 13:44:43:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-06-21 13:44:43:     raise exc from None
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-21 13:44:43:     module = importlib.import_module(module_str)
+2026-06-21 13:44:43:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-21 13:44:43:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-21 13:44:43:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-21 13:44:43:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-21 13:44:43:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-21 13:44:43:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-21 13:44:43:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-21 13:44:43:   File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+2026-06-21 13:44:43:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-21 13:44:43:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 5, in <module>
+2026-06-21 13:44:43:     import httpx
+2026-06-21 13:44:43: ModuleNotFoundError: No module named 'httpx'
+2026-06-21 13:46:37: INFO:     Stopping reloader process [99073]
+2026-06-21 13:46:38: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-21 13:46:38: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-21 13:46:38: INFO:     Started reloader process [403] using StatReload
+2026-06-21 13:46:38: INFO:     Started server process [418]
+2026-06-21 13:46:38: INFO:     Waiting for application startup.
+2026-06-21 13:46:38: INFO:     Application startup complete.
+2026-06-22 22:46:52: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-22 22:46:52: INFO:     Shutting down
+2026-06-22 22:46:53: INFO:     Waiting for application shutdown.
+2026-06-22 22:46:53: INFO:     Application shutdown complete.
+2026-06-22 22:46:53: INFO:     Finished server process [418]
+2026-06-22 22:46:53: Process SpawnProcess-2:
+2026-06-22 22:46:53: Traceback (most recent call last):
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-22 22:46:53:     self.run()
+2026-06-22 22:46:53:     ~~~~~~~~^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-22 22:46:53:     self._target(*self._args, **self._kwargs)
+2026-06-22 22:46:53:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-22 22:46:53:     target(sockets=sockets)
+2026-06-22 22:46:53:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-22 22:46:53:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-22 22:46:53:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-22 22:46:53:     return runner.run(main)
+2026-06-22 22:46:53:            ~~~~~~~~~~^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-22 22:46:53:     return self._loop.run_until_complete(task)
+2026-06-22 22:46:53:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-22 22:46:53:     return future.result()
+2026-06-22 22:46:53:            ~~~~~~~~~~~~~^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-22 22:46:53:     await self._serve(sockets)
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-22 22:46:53:     config.load()
+2026-06-22 22:46:53:     ~~~~~~~~~~~^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-22 22:46:53:     self.loaded_app = import_from_string(self.app)
+2026-06-22 22:46:53:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-22 22:46:53:     module = importlib.import_module(module_str)
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-22 22:46:53:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-22 22:46:53:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap_external>", line 755, in exec_module
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap_external>", line 893, in get_code
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap_external>", line 823, in source_to_code
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-22 22:46:53:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 57
+2026-06-22 22:46:53:     resp_body = None
+2026-06-22 22:46:53: IndentationError: unexpected indent
+2026-06-22 22:46:53: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-22 22:46:53: Process SpawnProcess-3:
+2026-06-22 22:46:53: Traceback (most recent call last):
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-22 22:46:53:     self.run()
+2026-06-22 22:46:53:     ~~~~~~~~^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-22 22:46:53:     self._target(*self._args, **self._kwargs)
+2026-06-22 22:46:53:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-22 22:46:53:     target(sockets=sockets)
+2026-06-22 22:46:53:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-22 22:46:53:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-22 22:46:53:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-22 22:46:53:     return runner.run(main)
+2026-06-22 22:46:53:            ~~~~~~~~~~^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-22 22:46:53:     return self._loop.run_until_complete(task)
+2026-06-22 22:46:53:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-22 22:46:53:     return future.result()
+2026-06-22 22:46:53:            ~~~~~~~~~~~~~^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-22 22:46:53:     await self._serve(sockets)
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-22 22:46:53:     config.load()
+2026-06-22 22:46:53:     ~~~~~~~~~~~^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-22 22:46:53:     self.loaded_app = import_from_string(self.app)
+2026-06-22 22:46:53:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-22 22:46:53:     module = importlib.import_module(module_str)
+2026-06-22 22:46:53:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-22 22:46:53:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-22 22:46:53:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap_external>", line 755, in exec_module
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap_external>", line 893, in get_code
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap_external>", line 823, in source_to_code
+2026-06-22 22:46:53:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-22 22:46:53:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 57
+2026-06-22 22:46:53:     resp_body = None
+2026-06-22 22:46:53: IndentationError: unexpected indent
+2026-06-22 22:46:53: INFO:     Stopping reloader process [403]
+2026-06-22 22:46:54: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-22 22:46:54: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-22 22:46:54: INFO:     Started reloader process [14814] using StatReload
+2026-06-22 22:46:54: Process SpawnProcess-1:
+2026-06-22 22:46:54: Traceback (most recent call last):
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-22 22:46:54:     self.run()
+2026-06-22 22:46:54:     ~~~~~~~~^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-22 22:46:54:     self._target(*self._args, **self._kwargs)
+2026-06-22 22:46:54:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-22 22:46:54:     target(sockets=sockets)
+2026-06-22 22:46:54:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-22 22:46:54:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-22 22:46:54:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-22 22:46:54:     return runner.run(main)
+2026-06-22 22:46:54:            ~~~~~~~~~~^^^^^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-22 22:46:54:     return self._loop.run_until_complete(task)
+2026-06-22 22:46:54:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-22 22:46:54:     return future.result()
+2026-06-22 22:46:54:            ~~~~~~~~~~~~~^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-22 22:46:54:     await self._serve(sockets)
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-22 22:46:54:     config.load()
+2026-06-22 22:46:54:     ~~~~~~~~~~~^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-22 22:46:54:     self.loaded_app = import_from_string(self.app)
+2026-06-22 22:46:54:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-22 22:46:54:     module = importlib.import_module(module_str)
+2026-06-22 22:46:54:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-22 22:46:54:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-22 22:46:54:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap_external>", line 755, in exec_module
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap_external>", line 893, in get_code
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap_external>", line 823, in source_to_code
+2026-06-22 22:46:54:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-22 22:46:54:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 57
+2026-06-22 22:46:54:     resp_body = None
+2026-06-22 22:46:54: IndentationError: unexpected indent
+2026-06-22 22:46:56: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-22 22:46:56: Process SpawnProcess-2:
+2026-06-22 22:46:56: Traceback (most recent call last):
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-22 22:46:56:     self.run()
+2026-06-22 22:46:56:     ~~~~~~~~^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-22 22:46:56:     self._target(*self._args, **self._kwargs)
+2026-06-22 22:46:56:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-22 22:46:56:     target(sockets=sockets)
+2026-06-22 22:46:56:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-22 22:46:56:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-22 22:46:56:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-22 22:46:56:     return runner.run(main)
+2026-06-22 22:46:56:            ~~~~~~~~~~^^^^^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-22 22:46:56:     return self._loop.run_until_complete(task)
+2026-06-22 22:46:56:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-22 22:46:56:     return future.result()
+2026-06-22 22:46:56:            ~~~~~~~~~~~~~^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-22 22:46:56:     await self._serve(sockets)
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-22 22:46:56:     config.load()
+2026-06-22 22:46:56:     ~~~~~~~~~~~^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-22 22:46:56:     self.loaded_app = import_from_string(self.app)
+2026-06-22 22:46:56:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-22 22:46:56:     module = importlib.import_module(module_str)
+2026-06-22 22:46:56:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-22 22:46:56:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-22 22:46:56:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap_external>", line 755, in exec_module
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap_external>", line 893, in get_code
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap_external>", line 823, in source_to_code
+2026-06-22 22:46:56:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-22 22:46:56:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 57
+2026-06-22 22:46:56:     resp_body = None
+2026-06-22 22:46:56: IndentationError: unexpected indent
+2026-06-22 22:46:57: INFO:     Stopping reloader process [14814]
+2026-06-22 22:46:57: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-22 22:46:57: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-22 22:46:57: INFO:     Started reloader process [14860] using StatReload
+2026-06-22 22:46:57: Process SpawnProcess-1:
+2026-06-22 22:46:57: Traceback (most recent call last):
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-22 22:46:57:     self.run()
+2026-06-22 22:46:57:     ~~~~~~~~^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-22 22:46:57:     self._target(*self._args, **self._kwargs)
+2026-06-22 22:46:57:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-22 22:46:57:     target(sockets=sockets)
+2026-06-22 22:46:57:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-22 22:46:57:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-22 22:46:57:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-22 22:46:57:     return runner.run(main)
+2026-06-22 22:46:57:            ~~~~~~~~~~^^^^^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-22 22:46:57:     return self._loop.run_until_complete(task)
+2026-06-22 22:46:57:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-22 22:46:57:     return future.result()
+2026-06-22 22:46:57:            ~~~~~~~~~~~~~^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-22 22:46:57:     await self._serve(sockets)
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-22 22:46:57:     config.load()
+2026-06-22 22:46:57:     ~~~~~~~~~~~^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-22 22:46:57:     self.loaded_app = import_from_string(self.app)
+2026-06-22 22:46:57:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-22 22:46:57:     module = importlib.import_module(module_str)
+2026-06-22 22:46:57:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-22 22:46:57:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-22 22:46:57:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap_external>", line 755, in exec_module
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap_external>", line 893, in get_code
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap_external>", line 823, in source_to_code
+2026-06-22 22:46:57:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-22 22:46:57:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 57
+2026-06-22 22:46:57:     resp_body = None
+2026-06-22 22:46:57: IndentationError: unexpected indent
+2026-06-22 22:47:02: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-22 22:47:02: Process SpawnProcess-2:
+2026-06-22 22:47:02: Traceback (most recent call last):
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-22 22:47:02:     self.run()
+2026-06-22 22:47:02:     ~~~~~~~~^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-22 22:47:02:     self._target(*self._args, **self._kwargs)
+2026-06-22 22:47:02:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-22 22:47:02:     target(sockets=sockets)
+2026-06-22 22:47:02:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-22 22:47:02:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-22 22:47:02:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-22 22:47:02:     return runner.run(main)
+2026-06-22 22:47:02:            ~~~~~~~~~~^^^^^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-22 22:47:02:     return self._loop.run_until_complete(task)
+2026-06-22 22:47:02:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-22 22:47:02:     return future.result()
+2026-06-22 22:47:02:            ~~~~~~~~~~~~~^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-22 22:47:02:     await self._serve(sockets)
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-22 22:47:02:     config.load()
+2026-06-22 22:47:02:     ~~~~~~~~~~~^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-22 22:47:02:     self.loaded_app = import_from_string(self.app)
+2026-06-22 22:47:02:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-22 22:47:02:     module = importlib.import_module(module_str)
+2026-06-22 22:47:02:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-22 22:47:02:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-22 22:47:02:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap_external>", line 755, in exec_module
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap_external>", line 893, in get_code
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap_external>", line 823, in source_to_code
+2026-06-22 22:47:02:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-22 22:47:02:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 57
+2026-06-22 22:47:02:     resp_body = None
+2026-06-22 22:47:02: IndentationError: unexpected indent
+2026-06-22 22:47:03: INFO:     Stopping reloader process [14860]
+2026-06-22 22:47:03: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-22 22:47:03: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-22 22:47:03: INFO:     Started reloader process [14905] using StatReload
+2026-06-22 22:47:04: Process SpawnProcess-1:
+2026-06-22 22:47:04: Traceback (most recent call last):
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 320, in _bootstrap
+2026-06-22 22:47:04:     self.run()
+2026-06-22 22:47:04:     ~~~~~~~~^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/process.py", line 108, in run
+2026-06-22 22:47:04:     self._target(*self._args, **self._kwargs)
+2026-06-22 22:47:04:     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/_subprocess.py", line 80, in subprocess_started
+2026-06-22 22:47:04:     target(sockets=sockets)
+2026-06-22 22:47:04:     ~~~~~~^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 67, in run
+2026-06-22 22:47:04:     return asyncio.run(self.serve(sockets=sockets))
+2026-06-22 22:47:04:            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 204, in run
+2026-06-22 22:47:04:     return runner.run(main)
+2026-06-22 22:47:04:            ~~~~~~~~~~^^^^^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 127, in run
+2026-06-22 22:47:04:     return self._loop.run_until_complete(task)
+2026-06-22 22:47:04:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+2026-06-22 22:47:04:     return future.result()
+2026-06-22 22:47:04:            ~~~~~~~~~~~~~^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 71, in serve
+2026-06-22 22:47:04:     await self._serve(sockets)
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/server.py", line 78, in _serve
+2026-06-22 22:47:04:     config.load()
+2026-06-22 22:47:04:     ~~~~~~~~~~~^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/config.py", line 436, in load
+2026-06-22 22:47:04:     self.loaded_app = import_from_string(self.app)
+2026-06-22 22:47:04:                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-06-22 22:47:04:     module = importlib.import_module(module_str)
+2026-06-22 22:47:04:   File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-06-22 22:47:04:     return _bootstrap._gcd_import(name[level:], package, level)
+2026-06-22 22:47:04:            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap>", line 1406, in _gcd_import
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap_external>", line 755, in exec_module
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap_external>", line 893, in get_code
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap_external>", line 823, in source_to_code
+2026-06-22 22:47:04:   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-06-22 22:47:04:   File "/Users/870041/OAI-Compatible-Model-Checker/app.py", line 57
+2026-06-22 22:47:04:     resp_body = None
+2026-06-22 22:47:04: IndentationError: unexpected indent
+2026-06-22 22:47:12: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-22 22:47:12: INFO:     Started server process [14940]
+2026-06-22 22:47:12: INFO:     Waiting for application startup.
+2026-06-22 22:47:12: INFO:     Application startup complete.
+2026-06-22 22:47:13: INFO:     Shutting down
+2026-06-22 22:47:13: INFO:     Waiting for application shutdown.
+2026-06-22 22:47:13: INFO:     Application shutdown complete.
+2026-06-22 22:47:13: INFO:     Finished server process [14940]
+2026-06-22 22:47:13: INFO:     Stopping reloader process [14905]
+2026-06-22 22:47:13: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-22 22:47:13: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-22 22:47:13: INFO:     Started reloader process [14981] using StatReload
+2026-06-22 22:47:13: INFO:     Started server process [14983]
+2026-06-22 22:47:13: INFO:     Waiting for application startup.
+2026-06-22 22:47:13: INFO:     Application startup complete.
+2026-06-22 23:55:18: INFO:     Shutting down
+2026-06-22 23:55:18: INFO:     Waiting for application shutdown.
+2026-06-22 23:55:18: INFO:     Application shutdown complete.
+2026-06-22 23:55:18: INFO:     Finished server process [14983]
+2026-06-22 23:55:18: INFO:     Stopping reloader process [14981]
+2026-06-22 23:55:21: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-22 23:55:21: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-22 23:55:21: INFO:     Started reloader process [18550] using StatReload
+2026-06-22 23:55:21: INFO:     Started server process [18562]
+2026-06-22 23:55:21: INFO:     Waiting for application startup.
+2026-06-22 23:55:21: INFO:     Application startup complete.
+2026-06-22 23:57:16: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-22 23:57:16: INFO:     Shutting down
+2026-06-22 23:57:16: INFO:     Waiting for connections to close. (CTRL+C to force quit)
+2026-06-22 23:57:16: ERROR:    ASGI callable returned without completing response.
+2026-06-22 23:57:16: INFO:     Waiting for application shutdown.
+2026-06-22 23:57:16: INFO:     Application shutdown complete.
+2026-06-22 23:57:16: INFO:     Finished server process [18562]
+2026-06-22 23:57:16: INFO:     Started server process [18651]
+2026-06-22 23:57:16: INFO:     Waiting for application startup.
+2026-06-22 23:57:16: INFO:     Application startup complete.
+2026-06-22 23:57:17: INFO:     Shutting down
+2026-06-22 23:57:17: INFO:     Waiting for application shutdown.
+2026-06-22 23:57:17: INFO:     Application shutdown complete.
+2026-06-22 23:57:17: INFO:     Finished server process [18651]
+2026-06-22 23:57:17: INFO:     Stopping reloader process [18550]
+2026-06-22 23:57:17: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-22 23:57:17: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-22 23:57:17: INFO:     Started reloader process [18671] using StatReload
+2026-06-22 23:57:17: INFO:     Started server process [18673]
+2026-06-22 23:57:17: INFO:     Waiting for application startup.
+2026-06-22 23:57:17: INFO:     Application startup complete.
+2026-06-23 00:17:21: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-23 00:17:21: INFO:     Shutting down
+2026-06-23 00:17:21: INFO:     Waiting for application shutdown.
+2026-06-23 00:17:21: INFO:     Application shutdown complete.
+2026-06-23 00:17:21: INFO:     Finished server process [18673]
+2026-06-23 00:17:21: INFO:     Started server process [21512]
+2026-06-23 00:17:21: INFO:     Waiting for application startup.
+2026-06-23 00:17:21: INFO:     Application startup complete.
+2026-06-23 00:17:22: INFO:     Shutting down
+2026-06-23 00:17:22: INFO:     Waiting for application shutdown.
+2026-06-23 00:17:22: INFO:     Application shutdown complete.
+2026-06-23 00:17:22: INFO:     Finished server process [21512]
+2026-06-23 00:17:22: INFO:     Stopping reloader process [18671]
+2026-06-23 00:17:22: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-23 00:17:22: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-23 00:17:22: INFO:     Started reloader process [21547] using StatReload
+2026-06-23 00:17:22: INFO:     Started server process [21549]
+2026-06-23 00:17:22: INFO:     Waiting for application startup.
+2026-06-23 00:17:22: INFO:     Application startup complete.
+2026-06-23 00:17:38: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-23 00:17:38: INFO:     Shutting down
+2026-06-23 00:17:38: INFO:     Waiting for application shutdown.
+2026-06-23 00:17:38: INFO:     Application shutdown complete.
+2026-06-23 00:17:38: INFO:     Finished server process [21549]
+2026-06-23 00:17:38: INFO:     Started server process [21590]
+2026-06-23 00:17:38: INFO:     Waiting for application startup.
+2026-06-23 00:17:38: INFO:     Application startup complete.
+2026-06-23 00:17:38: INFO:     Shutting down
+2026-06-23 00:17:39: INFO:     Waiting for application shutdown.
+2026-06-23 00:17:39: INFO:     Application shutdown complete.
+2026-06-23 00:17:39: INFO:     Finished server process [21590]
+2026-06-23 00:17:39: INFO:     Stopping reloader process [21547]
+2026-06-23 00:17:39: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-23 00:17:39: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-23 00:17:39: INFO:     Started reloader process [21614] using StatReload
+2026-06-23 00:17:39: INFO:     Started server process [21616]
+2026-06-23 00:17:39: INFO:     Waiting for application startup.
+2026-06-23 00:17:39: INFO:     Application startup complete.
+2026-06-23 00:18:51: WARNING:  StatReload detected changes in 'app.py'. Reloading...
+2026-06-23 00:18:51: INFO:     Shutting down
+2026-06-23 00:18:51: INFO:     Waiting for application shutdown.
+2026-06-23 00:18:51: INFO:     Application shutdown complete.
+2026-06-23 00:18:51: INFO:     Finished server process [21616]
+2026-06-23 00:18:52: INFO:     Started server process [21744]
+2026-06-23 00:18:52: INFO:     Waiting for application startup.
+2026-06-23 00:18:52: INFO:     Application startup complete.
+2026-06-23 00:18:52: INFO:     Shutting down
+2026-06-23 00:18:52: INFO:     Waiting for application shutdown.
+2026-06-23 00:18:52: INFO:     Application shutdown complete.
+2026-06-23 00:18:52: INFO:     Finished server process [21744]
+2026-06-23 00:18:52: INFO:     Stopping reloader process [21614]
+2026-06-23 00:18:52: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-23 00:18:52: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-23 00:18:52: INFO:     Started reloader process [21775] using StatReload
+2026-06-23 00:18:53: INFO:     Started server process [21777]
+2026-06-23 00:18:53: INFO:     Waiting for application startup.
+2026-06-23 00:18:53: INFO:     Application startup complete.
+2026-06-23 00:20:09: INFO:     Shutting down
+2026-06-23 00:20:09: INFO:     Waiting for application shutdown.
+2026-06-23 00:20:09: INFO:     Application shutdown complete.
+2026-06-23 00:20:09: INFO:     Finished server process [21777]
+2026-06-23 00:20:09: INFO:     Stopping reloader process [21775]
+2026-06-23 00:20:10: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-23 00:20:10: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-23 00:20:10: INFO:     Started reloader process [21879] using StatReload
+2026-06-23 00:20:10: INFO:     Started server process [21891]
+2026-06-23 00:20:10: INFO:     Waiting for application startup.
+2026-06-23 00:20:10: INFO:     Application startup complete.
+2026-06-23 00:21:28: INFO:     Shutting down
+2026-06-23 00:21:28: INFO:     Waiting for application shutdown.
+2026-06-23 00:21:28: INFO:     Application shutdown complete.
+2026-06-23 00:21:28: INFO:     Finished server process [21891]
+2026-06-23 00:21:28: INFO:     Stopping reloader process [21879]
+2026-06-23 00:21:28: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-23 00:21:28: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-23 00:21:28: INFO:     Started reloader process [22001] using StatReload
+2026-06-23 00:21:29: INFO:     Started server process [22003]
+2026-06-23 00:21:29: INFO:     Waiting for application startup.
+2026-06-23 00:21:29: INFO:     Application startup complete.
+2026-06-23 00:22:11: INFO:     Shutting down
+2026-06-23 00:22:11: INFO:     Waiting for application shutdown.
+2026-06-23 00:22:11: INFO:     Application shutdown complete.
+2026-06-23 00:22:11: INFO:     Finished server process [22003]
+2026-06-23 00:22:11: INFO:     Stopping reloader process [22001]
+2026-06-23 00:22:11: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-23 00:22:11: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-23 00:22:11: INFO:     Started reloader process [22588] using StatReload
+2026-06-23 00:22:12: INFO:     Started server process [22590]
+2026-06-23 00:22:12: INFO:     Waiting for application startup.
+2026-06-23 00:22:12: INFO:     Application startup complete.
+2026-06-23 00:22:15: INFO:     Shutting down
+2026-06-23 00:22:15: INFO:     Waiting for application shutdown.
+2026-06-23 00:22:15: INFO:     Application shutdown complete.
+2026-06-23 00:22:15: INFO:     Finished server process [22590]
+2026-06-23 00:22:15: INFO:     Stopping reloader process [22588]
+2026-06-23 00:22:15: INFO:     Will watch for changes in these directories: ['/Users/870041/OAI-Compatible-Model-Checker']
+2026-06-23 00:22:15: INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-23 00:22:15: INFO:     Started reloader process [22652] using StatReload
+2026-06-23 00:22:16: INFO:     Started server process [22664]
+2026-06-23 00:22:16: INFO:     Waiting for application startup.
+2026-06-23 00:22:16: INFO:     Application startup complete.

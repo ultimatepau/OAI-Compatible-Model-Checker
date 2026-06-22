@@ -115,7 +115,7 @@
       <select id="config-provider" onchange="renderConfigModels()"></select>
     </div>
 
-    <div class="section-title">Models</div>
+    <div class="section-title">Models <span id="model-count" style="color:#8b949e;font-size:0.85rem;font-weight:normal;"></span></div>
     <div id="config-models" class="config-models"></div>
 
     <div class="add-model-row">
@@ -129,6 +129,7 @@
       <select id="sync-mode">
         <option value="merge">Merge — add active models only</option>
         <option value="replace">Replace — remove inactive models too</option>
+        <option value="all">Add All — add all models regardless of status</option>
       </select>
       <button onclick="syncResultsToConfig()">Sync Results → Config</button>
     </div>
@@ -337,8 +338,11 @@ function renderConfigModels() {
   currentProvider = provider;
   const models = configData?.provider?.[provider]?.models || {};
   const container = document.getElementById("config-models");
+  const countEl = document.getElementById("model-count");
 
   const sorted = Object.keys(models).sort();
+  countEl.textContent = `(${sorted.length} model${sorted.length !== 1 ? 's' : ''})`;
+
   container.innerHTML = sorted.map(id => `
     <span class="config-model-tag">
       ${esc(id)}
@@ -404,13 +408,49 @@ async function removeConfigModel(modelId) {
 
 async function syncResultsToConfig() {
   const status = document.getElementById("config-status");
+  const mode = document.getElementById("sync-mode").value;
+
+  if (mode === "all") {
+    const endpoint = document.getElementById("endpoint").value.trim();
+    const api_key = document.getElementById("api_key").value.trim();
+
+    if (!endpoint) {
+      status.textContent = "Please enter an endpoint URL in the Check Models tab first.";
+      status.style.color = "#f85149";
+      return;
+    }
+
+    status.textContent = "Fetching models from API...";
+    status.style.color = "#8b949e";
+
+    try {
+      const resp = await fetch("/api/config/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint, api_key, provider: currentProvider, mode }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        status.textContent = `✓ Synced! Added: ${data.added.length}, Total: ${data.total}`;
+        status.style.color = "#3fb950";
+        await loadConfig();
+      } else {
+        status.textContent = `✗ ${data.error}`;
+        status.style.color = "#f85149";
+      }
+    } catch (e) {
+      status.textContent = `Error: ${e.message}`;
+      status.style.color = "#f85149";
+    }
+    return;
+  }
+
   if (checkResults.length === 0) {
     status.textContent = "No check results to sync. Run a check first.";
     status.style.color = "#f85149";
     return;
   }
 
-  const mode = document.getElementById("sync-mode").value;
   const active = checkResults.filter(r => r.status === "active").map(r => r.model);
   const inactive = checkResults.filter(r => r.status === "inactive").map(r => r.model);
 

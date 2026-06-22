@@ -144,12 +144,10 @@ async def update_config_models(request: Request):
 
 @app.post("/api/config/sync")
 async def sync_models_to_config(request: Request):
-    """Sync active models from a check into the opencode config (add active, remove inactive)."""
+    """Sync models from a check into the opencode config."""
     body = await request.json()
-    active_models = body.get("active", [])
-    inactive_models = body.get("inactive", [])
     provider = body.get("provider", "9router")
-    mode = body.get("mode", "merge")  # "merge" = add active only, "replace" = set to exactly active list
+    mode = body.get("mode", "merge")
 
     try:
         config = read_opencode_config()
@@ -158,16 +156,42 @@ async def sync_models_to_config(request: Request):
         added = []
         removed = []
 
-        if mode == "replace":
-            for mid in list(models.keys()):
-                if mid not in active_models:
-                    del models[mid]
-                    removed.append(mid)
+        if mode == "all":
+            endpoint = body.get("endpoint", "").rstrip("/")
+            api_key = body.get("api_key", "")
+            
+            if not endpoint:
+                return {"ok": False, "error": "Endpoint URL is required for 'all' mode"}
 
-        for mid in active_models:
-            if mid not in models:
-                models[mid] = {"name": mid}
-                added.append(mid)
+            headers = {"Authorization": f"Bearer {api_key}"}
+            async with httpx.AsyncClient(timeout=15) as client:
+                try:
+                    resp = await client.get(f"{endpoint}/v1/models", headers=headers)
+                    resp.raise_for_status()
+                    data = resp.json()
+                except Exception as e:
+                    return {"ok": False, "error": f"Failed to fetch models: {str(e)}"}
+
+            all_models = [m["id"] for m in data.get("data", [])]
+            for mid in all_models:
+                if mid not in models:
+                    models[mid] = {"name": mid}
+                    added.append(mid)
+        else:
+            active_models = body.get("active", [])
+            inactive_models = body.get("inactive", [])
+
+            if mode == "replace":
+                for mid in list(models.keys()):
+                    if mid not in active_models:
+                        del models[mid]
+                        removed.append(mid)
+
+            models_to_add = active_models
+            for mid in models_to_add:
+                if mid not in models:
+                    models[mid] = {"name": mid}
+                    added.append(mid)
 
         write_opencode_config(config)
         return {"ok": True, "added": added, "removed": removed, "total": len(models)}
