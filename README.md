@@ -1,6 +1,6 @@
 # Model Checker & OpenCode Config Manager
 
-*[Bahasa Indonesia](#model-checker--opencode-config-manager-1) | [English](#model-checker--opencode-config-manager-2)*
+*[Bahasa Indonesia](#model-checker--opencode-config-manager-indonesia) | [English](#model-checker--opencode-config-manager-english)*
 
 ## Model Checker & OpenCode Config Manager (Indonesia)
 
