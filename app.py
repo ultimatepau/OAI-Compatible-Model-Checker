@@ -3,6 +3,7 @@ import json
 import time
 
 import httpx
+import tiktoken
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from pathlib import Path
@@ -10,8 +11,23 @@ from sse_starlette.sse import EventSourceResponse
 
 app = FastAPI()
 
+enc = tiktoken.get_encoding("cl100k_base")
+
 HTML_PATH = Path(__file__).parent / "index.html"
 OPENCODE_CONFIG = Path.home() / ".config" / "opencode" / "opencode.json"
+LOG_FILE = Path(__file__).parent / "checker.log"
+
+
+def log_call(model, request_payload, response_text, error=None):
+    record = {
+        "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "model": model,
+        "request": request_payload,
+        "response": response_text,
+        "error": error,
+    }
+    with LOG_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -32,7 +48,7 @@ async def check_models(request: Request):
 
     async def event_generator():
         # 1. Fetch model list
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             try:
                 resp = await client.get(f"{endpoint}/v1/models", headers=headers)
                 resp.raise_for_status()
@@ -57,24 +73,53 @@ async def check_models(request: Request):
                     "max_tokens": max_tokens,
                 }
                 resp_body = None
+                prompt_tokens = None
+                completion_tokens = None
                 start = time.monotonic()
                 try:
-                    async with httpx.AsyncClient(timeout=15) as client:
+                    async with httpx.AsyncClient(timeout=None) as client:
                         resp = await client.post(
                             f"{endpoint}/v1/chat/completions",
                             headers={**headers, "Content-Type": "application/json"},
                             json=payload,
                         )
-                        resp_body = resp.text[:2000]
+                        resp_body = resp.text[:200000]
                         latency = int((time.monotonic() - start) * 1000)
+                        prompt_tokens = len(enc.encode(prompt))
+                        data = None
+                        try:
+                            data = resp.json()
+                        except Exception:
+                            cleaned = resp.text.strip()
+                            done_idx = cleaned.rfind("data: [DONE]")
+                            if done_idx != -1:
+                                cleaned = cleaned[:done_idx].strip()
+                            try:
+                                data = json.loads(cleaned)
+                            except Exception:
+                                pass
+                        if data:
+                            try:
+                                usage = data.get("usage") or {}
+                                if usage.get("prompt_tokens") is not None:
+                                    prompt_tokens = usage["prompt_tokens"]
+                                if usage.get("completion_tokens") is not None:
+                                    completion_tokens = usage["completion_tokens"]
+                                else:
+                                    content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+                                    completion_tokens = len(enc.encode(content))
+                            except Exception:
+                                pass
                         resp.raise_for_status()
                         done_count += 1
-                        return {"type": "result", "model": model_id, "status": "active", "latency_ms": latency, "error": None, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body}
+                        log_call(model_id, payload, resp_body)
+                        return {"type": "result", "model": model_id, "status": "active", "latency_ms": latency, "error": None, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
                 except Exception as e:
                     latency = int((time.monotonic() - start) * 1000)
                     done_count += 1
                     err_msg = str(e)[:200]
-                    return {"type": "result", "model": model_id, "status": "inactive", "latency_ms": latency, "error": err_msg, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body}
+                    log_call(model_id, payload, resp_body, error=err_msg)
+                    return {"type": "result", "model": model_id, "status": "inactive", "latency_ms": latency, "error": err_msg, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
 
         # Run tests concurrently, yield results as they complete
         tasks = {asyncio.create_task(test_model(m)): m for m in models}
@@ -164,7 +209,7 @@ async def sync_models_to_config(request: Request):
                 return {"ok": False, "error": "Endpoint URL is required for 'all' mode"}
 
             headers = {"Authorization": f"Bearer {api_key}"}
-            async with httpx.AsyncClient(timeout=15) as client:
+            async with httpx.AsyncClient(timeout=None) as client:
                 try:
                     resp = await client.get(f"{endpoint}/v1/models", headers=headers)
                     resp.raise_for_status()
