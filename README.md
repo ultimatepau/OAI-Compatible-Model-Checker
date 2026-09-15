@@ -4,7 +4,7 @@ A lightweight, local web-based tool designed to check compatibility and status o
 
 ## Features
 
-- **Concurrent Endpoint Testing**: Fetches models from standard `/v1/models` and tests chat completion (`/v1/chat/completions`) concurrently.
+- **Concurrent Endpoint Testing**: Fetches models from standard `/v1/models` and tests chat completion (`/v1/chat/completions`) concurrently (up to 5 models at a time).
 - **SSE Real-time Output**: Streams progress, latency, and status in real-time.
 - **OpenCode Config Integration**:
   - Automatically reads and parses `~/.config/opencode/opencode.json`.
@@ -20,13 +20,25 @@ A lightweight, local web-based tool designed to check compatibility and status o
 ## Setup
 
 1. **Install Dependencies**:
+
+   Option A: using `pip`
    ```bash
    pip install -r requirements.txt
+   ```
+
+   Option B: using [`uv`](https://github.com/astral-sh/uv) (faster)
+   ```bash
+   uv venv
+   uv pip install -r requirements.txt
    ```
 
 2. **Run the Application**:
    ```bash
    uvicorn app:app --reload
+   ```
+   Or, if using `uv`:
+   ```bash
+   uv run uvicorn app:app --reload
    ```
 
 3. **Open the Web UI**:

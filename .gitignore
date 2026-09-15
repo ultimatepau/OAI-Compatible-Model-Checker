@@ -67,6 +67,10 @@ venv.bak/
 *.swo
 *~
 
+# App runtime logs
+checker.log
+logs/
+
 # OS generated files
 .DS_Store
 .DS_Store?
