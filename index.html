@@ -3,175 +3,252 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Model Checker</title>
+<meta name="color-scheme" content="dark">
+<title>OAI Model Checker</title>
 <style>
+  /* Theme: dark, fixed — this is a developer tool for editing opencode configs (R-21).
+     Palette: one neutral gray family; green/red reserved strictly for status semantics.
+     Accent (green) appears only on the primary action and active state. */
+  :root {
+    --bg: #0f1216;
+    --surface: #161b22;
+    --surface-2: #1c232d;
+    --border: #272e39;
+    --text: #dbe2ea;
+    --muted: #8b95a3;
+    --ok: #4cc38a;
+    --bad: #e5484d;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 2rem; }
-  h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #58a6ff; }
-  .form-group { margin-bottom: 1rem; }
-  label { display: block; font-size: 0.85rem; margin-bottom: 0.3rem; color: #8b949e; }
-  input, textarea { width: 100%; max-width: 600px; padding: 0.5rem 0.75rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 0.9rem; }
-  input:focus, textarea:focus { outline: none; border-color: #58a6ff; }
-  textarea { resize: vertical; height: 60px; }
-  .row { display: flex; gap: 1rem; max-width: 600px; }
-  .row .form-group { flex: 1; }
-  button { padding: 0.6rem 1.5rem; background: #238636; color: #fff; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; margin-top: 0.5rem; }
-  button:hover { background: #2ea043; }
-  button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
-  button.secondary { background: #30363d; }
-  button.secondary:hover { background: #484f58; }
-  button.danger { background: #da3633; }
-  button.danger:hover { background: #f85149; }
-  .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #30363d; }
-  .tab { padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.9rem; color: #8b949e; border-bottom: 2px solid transparent; }
-  .tab:hover { color: #c9d1d9; }
-  .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 40px 20px 72px; }
+  code { font-family: var(--mono); font-size: 0.9em; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0.05rem 0.3rem; }
+
+  header h1 { font-size: 1.3rem; font-weight: 650; letter-spacing: -0.01em; }
+  header .tagline { color: var(--muted); font-size: 0.9rem; margin-top: 0.3rem; max-width: 40em; }
+
+  .tabs { display: flex; gap: 0.25rem; margin: 1.75rem 0 1.5rem; border-bottom: 1px solid var(--border); }
+  .tab { background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 0.5rem 0.9rem; color: var(--muted); font-size: 0.9rem; cursor: pointer; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--ok); }
   .panel { display: none; }
   .panel.active { display: block; }
-  .section-title { font-size: 1rem; color: #c9d1d9; margin: 1.5rem 0 0.75rem; }
-  .config-models { display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: 900px; margin-top: 0.5rem; }
-  .config-model-tag { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.5rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; font-size: 0.8rem; }
-  .config-model-tag .remove { cursor: pointer; color: #f85149; font-weight: bold; margin-left: 0.2rem; }
-  .config-model-tag .remove:hover { color: #ff7b72; }
-  .add-model-row { display: flex; gap: 0.5rem; max-width: 500px; margin-top: 0.75rem; }
-  .add-model-row input { flex: 1; }
-  .add-model-row button { margin-top: 0; padding: 0.5rem 1rem; }
-  select { padding: 0.5rem 0.75rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 0.9rem; }
-  select:focus { outline: none; border-color: #58a6ff; }
-  .sync-bar { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; align-items: center; }
-  .sync-bar select { padding: 0.5rem 0.75rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 0.85rem; }
-  .config-info { font-size: 0.8rem; color: #8b949e; margin-top: 0.5rem; }
-  #config-status { margin-top: 0.5rem; font-size: 0.85rem; min-height: 1.2em; }
-  #progress { margin: 1rem 0; font-size: 0.85rem; color: #8b949e; min-height: 1.2em; }
-  .summary { margin: 0.5rem 0 1rem; font-size: 0.9rem; color: #8b949e; }
-  .summary .active { color: #3fb950; font-weight: 600; }
-  .summary .inactive { color: #f85149; font-weight: 600; }
-  table { width: 100%; max-width: 900px; border-collapse: collapse; margin-top: 0.5rem; }
-  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #21262d; font-size: 0.85rem; }
-  th { color: #8b949e; font-weight: 600; position: sticky; top: 0; background: #0d1117; }
-  tr:hover { background: #161b22; }
-  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
-  .badge.active { background: #238636; color: #fff; }
-  .badge.inactive { background: #da3633; color: #fff; }
-  .error-text { color: #f85149; font-size: 0.8rem; max-width: 350px; word-break: break-all; }
-  td.col-json { max-width: 300px; }
-  .json-toggle { cursor: pointer; color: #58a6ff; font-size: 0.8rem; user-select: none; }
-  .json-toggle:hover { text-decoration: underline; }
-  .json-block { display: none; margin-top: 0.3rem; padding: 0.4rem; background: #0d1117; border: 1px solid #21262d; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.75rem; color: #8b949e; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
-  .json-block.open { display: block; }
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
-  .modal-overlay.open { display: flex; }
-  .modal { background: #161b22; border: 1px solid #30363d; border-radius: 8px; width: min(90vw, 800px); max-height: 85vh; display: flex; flex-direction: column; padding: 1rem; gap: 0.75rem; }
-  .modal-header { display: flex; align-items: center; justify-content: space-between; }
-  .modal-title { font-size: 0.95rem; color: #58a6ff; font-weight: 600; word-break: break-all; }
-  .modal-close { background: none; border: none; color: #8b949e; font-size: 1.4rem; cursor: pointer; margin: 0; padding: 0 0.3rem; line-height: 1; }
-  .modal-close:hover { color: #f85149; background: none; }
-  .modal textarea { width: 100%; max-width: none; height: 50vh; resize: none; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.8rem; white-space: pre; overflow: auto; }
-  .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
-  .modal-actions button { margin-top: 0; padding: 0.45rem 1rem; }
+
+  /* Form */
+  .field { margin-bottom: 1.1rem; }
+  label { display: block; font-size: 0.8rem; font-weight: 550; margin-bottom: 0.3rem; }
+  label .count { color: var(--muted); font-weight: 400; }
+  input, textarea, select { width: 100%; padding: 0.45rem 0.65rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
+  input:disabled { color: var(--muted); background: var(--bg); cursor: not-allowed; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--ok); outline-offset: -1px; border-color: var(--ok); }
+  textarea { resize: vertical; min-height: 56px; }
+  .hint { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; }
+  .row { display: flex; gap: 1rem; }
+  .row .field { flex: 1; }
+  .inline { display: flex; gap: 0.5rem; }
+  .inline select { flex: 0 0 auto; width: auto; min-width: 170px; }
+  .inline input { flex: 1; }
+  button { font: inherit; font-size: 0.9rem; padding: 0.5rem 1.1rem; border: 1px solid transparent; border-radius: 6px; cursor: pointer; background: var(--surface-2); color: var(--text); }
+  button:hover { border-color: var(--border); background: #232c37; }
+  button:focus-visible, .tab:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+  button.primary { background: #2ea45f; color: #fff; font-weight: 550; }
+  button.primary:hover { background: #35b56b; }
+  button:disabled { background: var(--surface); color: #55606e; cursor: not-allowed; border-color: var(--border); }
+  .add-row { display: flex; gap: 0.5rem; max-width: 440px; margin-top: 0.6rem; }
+  .add-row input { flex: 1; }
+  .add-row button { flex: 0 0 auto; }
+
+  /* How-it-works */
+  details.how { margin: 0 0 1.5rem; font-size: 0.85rem; color: var(--muted); }
+  details.how summary { cursor: pointer; color: var(--text); font-size: 0.85rem; user-select: none; }
+  details.how ol { margin: 0.6rem 0 0.2rem 1.25rem; display: grid; gap: 0.25rem; }
+
+  /* Progress */
+  #progress { margin: 1.25rem 0; }
+  #progress .bar { height: 6px; background: var(--surface-2); border-radius: 3px; margin-top: 0.45rem; overflow: hidden; }
+  #progress .bar-fill { height: 100%; width: 0; background: var(--ok); border-radius: 3px; transition: width 0.2s ease; }
+  #progress.err .bar { display: none; }
+  #progress.err #progress-text { color: var(--bad); }
+
+  /* Results */
+  .summary { font-size: 0.88rem; color: var(--muted); margin-bottom: 0.6rem; }
+  .summary .ok { color: var(--ok); font-weight: 600; }
+  .summary .bad { color: var(--bad); font-weight: 600; }
+  .filters { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
+  .chip { font-size: 0.78rem; padding: 0.25rem 0.7rem; border-radius: 999px; background: none; border: 1px solid var(--border); color: var(--muted); }
+  .chip:hover { color: var(--text); }
+  .chip.on { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  th { color: var(--muted); font-weight: 550; font-size: 0.78rem; background: var(--surface); white-space: nowrap; }
+  td.model { font-family: var(--mono); font-size: 0.8rem; word-break: break-all; }
+  tr.result:hover { background: var(--surface); }
+  .badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+  .badge.ok { background: rgba(76,195,138,0.14); color: var(--ok); }
+  .badge.bad { background: rgba(229,72,77,0.14); color: var(--bad); }
+  td .tokens { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+  td.error-text { color: var(--bad); font-size: 0.78rem; max-width: 320px; word-break: break-word; }
+  .det-btn { font-size: 0.78rem; padding: 0.2rem 0.6rem; }
+  tr.detail-row td { background: var(--surface); padding: 0.75rem 0.85rem; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .detail-grid h4 { font-size: 0.72rem; color: var(--muted); font-weight: 550; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem; }
+  .detail-grid pre { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem; max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .empty { border: 1px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; color: var(--muted); font-size: 0.88rem; }
+
+  /* Config panel */
+  .status { min-height: 1.3em; font-size: 0.85rem; margin-bottom: 0.75rem; }
+  .status.ok { color: var(--ok); }
+  .status.bad { color: var(--bad); }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.35rem 0.25rem 0.6rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 0.78rem; }
+  .tag .x { border: none; background: none; padding: 0 0.3rem; font-size: 0.85rem; color: var(--muted); cursor: pointer; line-height: 1; }
+  .tag .x:hover { color: var(--bad); }
+  .sync-select { max-width: 380px; }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 24px 16px 48px; }
+    .row, .detail-grid { display: block; }
+    .row .field, .inline { margin-bottom: 1.1rem; }
+    .inline { display: flex; }
+  }
 </style>
 </head>
 <body>
-<h1>🔍 Model Checker</h1>
+<div class="wrap">
+
+<header>
+  <h1>OAI Model Checker</h1>
+  <p class="tagline">Test which models on an OpenAI-compatible endpoint actually respond, then sync the working set into <code>~/.config/opencode/opencode.json</code>.</p>
+</header>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('checker')">Check Models</div>
-  <div class="tab" onclick="switchTab('config')">Config Manager</div>
+  <button class="tab active" type="button" onclick="switchTab('checker')">Check Models</button>
+  <button class="tab" type="button" onclick="switchTab('config')">Config Manager</button>
 </div>
 
 <!-- Checker Panel -->
 <div id="panel-checker" class="panel active">
-  <div class="form-group">
-    <label for="provider-select">Provider (from opencode config)</label>
-    <div style="display:flex;gap:0.5rem;max-width:600px;">
-      <select id="provider-select" onchange="onProviderChange()" style="flex:0 0 auto;min-width:160px;"></select>
-      <input type="text" id="endpoint" placeholder="https://api.openai.com" style="flex:1;" />
+  <details class="how">
+    <summary>How the check works</summary>
+    <ol>
+      <li>Fetches <code>GET /v1/models</code> from the endpoint to list available models.</li>
+      <li>Sends your prompt to every model via <code>POST /v1/chat/completions</code> — 5 requests in parallel, 15s timeout each.</li>
+      <li><b>Active</b> = any HTTP 200 response. <b>Inactive</b> = connection error, timeout, or non-200.</li>
+      <li>Latency measures the full response, not time to first token.</li>
+    </ol>
+  </details>
+
+  <div class="field">
+    <label for="provider-select">Provider</label>
+    <div class="inline">
+      <select id="provider-select" onchange="onProviderChange()"></select>
+      <input type="text" id="endpoint" placeholder="https://api.openai.com" />
     </div>
+    <p class="hint">Pick a provider from your opencode config to fill its base URL, or choose “manual” and paste any OpenAI-compatible endpoint. Only the base URL — <code>/v1/models</code> and <code>/v1/chat/completions</code> are appended automatically.</p>
   </div>
-  <div class="form-group">
+
+  <div class="field">
     <label for="api_key">API Key</label>
-    <input type="password" id="api_key" placeholder="sk-..." />
+    <input type="password" id="api_key" placeholder="sk-..." autocomplete="off" />
+    <p class="hint">Sent as <code>Authorization: Bearer …</code>. Leave empty for local servers (Ollama, LM Studio) that don't require auth.</p>
   </div>
+
   <div class="row">
-    <div class="form-group">
+    <div class="field">
       <label for="prompt">Test Prompt</label>
       <textarea id="prompt">hi</textarea>
+      <p class="hint">Sent to every model. Any valid reply marks the model active, so a short prompt keeps the check fast.</p>
     </div>
-    <div class="form-group">
+    <div class="field" style="max-width:180px">
       <label for="max_tokens">Max Tokens</label>
       <input type="number" id="max_tokens" value="10" min="1" max="100" />
+      <p class="hint">Caps the reply length so slow or chatty models finish quickly.</p>
     </div>
   </div>
-  <button id="checkBtn" onclick="startCheck()">Check Models</button>
-  <div id="progress"></div>
-  <div id="summary" class="summary"></div>
-  <table>
-    <thead>
-      <tr><th>Model</th><th>Status</th><th>Latency</th><th>Prompt Tokens</th><th>Completion Tokens</th><th>Request</th><th>Response</th><th>Error</th></tr>
-    </thead>
-    <tbody id="results"></tbody>
-  </table>
-</div>
 
-<!-- Response Modal -->
-<div id="response-modal" class="modal-overlay" onclick="if(event.target===this)closeResponseModal()">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="response-modal-title"></div>
-      <button class="modal-close" onclick="closeResponseModal()">×</button>
-    </div>
-    <textarea id="response-modal-text" readonly spellcheck="false"></textarea>
-    <div class="modal-actions">
-      <button class="secondary" onclick="closeResponseModal()">Close</button>
-      <button onclick="copyResponseModal()">Copy</button>
-    </div>
+  <button class="primary" id="checkBtn" type="button" onclick="startCheck()">Check Models</button>
+
+  <div id="progress" hidden>
+    <div id="progress-text"></div>
+    <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
   </div>
+
+  <div id="results-head" hidden style="margin-top:1.25rem">
+    <div class="summary" id="summary"></div>
+    <div class="filters" id="filters"></div>
+  </div>
+
+  <div class="table-wrap" id="table-wrap" hidden>
+    <table>
+      <thead>
+        <tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">Error</th><th scope="col"><span class="sr-only"></span>Details</th></tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+  </div>
+
+  <div id="empty" class="empty" hidden>No results yet. Pick a provider or enter an endpoint, add your API key, then run <b>Check Models</b>.</div>
 </div>
 
 <!-- Config Panel -->
 <div id="panel-config" class="panel">
-  <div id="config-status"></div>
-  <div id="config-loading">Loading config...</div>
-  <div id="config-content" style="display:none">
-    <p class="config-info">Editing: <code>~/.config/opencode/opencode.json</code></p>
+  <p class="hint" style="margin-bottom:1rem">Edits here are written directly to <code>~/.config/opencode/opencode.json</code> the moment you add, remove, or sync.</p>
 
-    <div class="section-title">Provider</div>
-    <div class="form-group" style="max-width:300px">
+  <div id="config-status" class="status" role="status"></div>
+  <div id="config-loading" class="empty">Loading config from <code>~/.config/opencode/opencode.json</code>…</div>
+
+  <div id="config-content" hidden>
+    <div class="field" style="max-width:340px">
+      <label for="config-provider">Provider</label>
       <select id="config-provider" onchange="renderConfigModels()"></select>
+      <p class="hint">Models are edited under <code>provider.&lt;name&gt;.models</code> in the config file.</p>
     </div>
 
-    <div class="section-title">Models <span id="model-count" style="color:#8b949e;font-size:0.85rem;font-weight:normal;"></span></div>
-    <div id="config-models" class="config-models"></div>
-
-    <div class="add-model-row">
-      <input type="text" id="new-model-id" placeholder="new-model-id" />
-      <button class="secondary" onclick="addConfigModel()">+ Add</button>
+    <div class="field">
+      <label>Models <span id="model-count" class="count"></span></label>
+      <div id="config-models" class="tags"></div>
+      <div class="add-row">
+        <input type="text" id="new-model-id" placeholder="model-id, e.g. gpt-4o-mini" />
+        <button type="button" onclick="addConfigModel()">Add</button>
+      </div>
     </div>
 
-    <div class="section-title">Sync from Checker</div>
-    <p class="config-info">After running a check, sync the results into your config.</p>
-    <div class="sync-bar">
-      <select id="sync-mode">
+    <div class="field">
+      <label for="sync-mode">Sync check results into this provider</label>
+      <select id="sync-mode" class="sync-select" onchange="syncHint()">
         <option value="merge">Merge — add active models only</option>
-        <option value="replace">Replace — remove inactive models too</option>
-        <option value="all">Add All — add all models regardless of status</option>
+        <option value="replace">Replace — keep only active models</option>
+        <option value="all">Add All — import the full model list</option>
       </select>
-      <button onclick="syncResultsToConfig()">Sync Results → Config</button>
+      <p class="hint" id="sync-hint"></p>
+      <button type="button" onclick="syncResultsToConfig()">Sync Results to Config</button>
     </div>
   </div>
 </div>
 
+</div>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────
-let checkResults = []; // stored for config sync
+let checkResults = [];      // stored for config sync
 let configData = null;
 let configProviders = [];
-let configEndpoints = []; // [{name, baseURL}]
+let configEndpoints = [];   // [{name, baseURL}]
 let currentProvider = "9router";
+let filter = "all";
+let totalCount = 0, doneCount = 0;
 
 const tbody = document.getElementById("results");
 const progress = document.getElementById("progress");
+const progressText = document.getElementById("progress-text");
+const barFill = document.getElementById("bar-fill");
 const summary = document.getElementById("summary");
+const filtersEl = document.getElementById("filters");
 const checkBtn = document.getElementById("checkBtn");
 
 // ── Init: load providers on page load ──────────────────────────────────
@@ -184,7 +261,6 @@ const checkBtn = document.getElementById("checkBtn");
       const sel = document.getElementById("provider-select");
       sel.innerHTML = '<option value="">— manual —</option>' +
         configEndpoints.map(e => `<option value="${esc(e.name)}">${esc(e.name)}${e.baseURL ? ' — ' + esc(e.baseURL) : ''}</option>`).join("");
-      // Auto-select the first provider that has a baseURL
       const withBase = configEndpoints.find(e => e.baseURL);
       if (withBase) {
         sel.value = withBase.name;
@@ -195,12 +271,15 @@ const checkBtn = document.getElementById("checkBtn");
 })();
 
 function onProviderChange() {
+  const input = document.getElementById("endpoint");
   const name = document.getElementById("provider-select").value;
-  if (!name) return;
+  if (!name) { input.disabled = false; return; } // manual — editable
   const ep = configEndpoints.find(e => e.name === name);
-  if (ep && ep.baseURL) {
-    document.getElementById("endpoint").value = ep.baseURL;
-  }
+  input.value = ep?.baseURL || "";
+  input.disabled = true;
+  input.placeholder = ep?.baseURL
+    ? "https://api.openai.com"
+    : "no baseURL in opencode config for this provider — switch to “— manual —” to enter one";
 }
 
 // ── Tabs ───────────────────────────────────────────────────────────────
@@ -219,16 +298,26 @@ async function startCheck() {
   const prompt = document.getElementById("prompt").value.trim() || "hi";
   const max_tokens = parseInt(document.getElementById("max_tokens").value) || 10;
 
-  if (!endpoint) { alert("Please enter an endpoint URL"); return; }
+  if (!endpoint) {
+    progress.hidden = false;
+    progress.classList.add("err");
+    progressText.textContent = "Enter an endpoint URL first — the checker needs somewhere to send requests.";
+    return;
+  }
 
   tbody.innerHTML = "";
   summary.innerHTML = "";
-  progress.textContent = "Fetching models...";
-  checkBtn.disabled = true;
-
-  let activeCount = 0;
-  let inactiveCount = 0;
+  filter = "all";
+  totalCount = 0; doneCount = 0;
   checkResults = [];
+  document.getElementById("table-wrap").hidden = true;
+  document.getElementById("results-head").hidden = true;
+  document.getElementById("empty").hidden = true;
+  progress.hidden = false;
+  progress.classList.remove("err");
+  barFill.style.width = "0%";
+  progressText.textContent = "Fetching models…";
+  checkBtn.disabled = true;
 
   try {
     const resp = await fetch("/api/check", {
@@ -257,163 +346,158 @@ async function startCheck() {
         try { msg = JSON.parse(json); } catch { continue; }
 
         if (msg.type === "models") {
-          progress.textContent = `Found ${msg.data.length} models. Testing...`;
+          totalCount = msg.data.length;
+          if (!totalCount) {
+            showProgressError("The endpoint listed zero models. Check the endpoint URL and API key.");
+          } else {
+            progressText.textContent = `Testing ${totalCount} models…`;
+          }
         } else if (msg.type === "result") {
-          if (msg.status === "active") activeCount++; else inactiveCount++;
-          progress.textContent = `Testing ${msg.progress}...`;
+          doneCount++;
+          msg._id = nextId++;
           checkResults.push(msg);
-          renderRows(checkResults);
+          barFill.style.width = totalCount ? `${(doneCount / totalCount) * 100}%` : "0%";
+          progressText.textContent = `Testing ${msg.progress}…`;
+          renderAll();
         } else if (msg.type === "error") {
-          progress.textContent = `Error: ${msg.error}`;
+          showProgressError(msg.error);
         } else if (msg.type === "done") {
-          progress.textContent = "Done!";
-          const totalPromptTokens = checkResults.reduce((sum, r) => sum + (r.prompt_tokens || 0), 0);
-          const totalCompletionTokens = checkResults.reduce((sum, r) => sum + (r.completion_tokens || 0), 0);
-          summary.innerHTML = `<span class="active">${activeCount} active</span> · <span class="inactive">${inactiveCount} inactive</span> · ${checkResults.length} total · ${totalPromptTokens} prompt tokens · ${totalCompletionTokens} completion tokens`;
+          if (totalCount) {
+            barFill.style.width = "100%";
+            progressText.textContent = `Done — ${doneCount}/${totalCount} tested.`;
+            renderAll();
+          }
         }
       }
     }
   } catch (e) {
-    progress.textContent = `Request failed: ${e.message}`;
+    showProgressError(`Request failed: ${e.message}`);
   }
 
   checkBtn.disabled = false;
 }
 
-function renderRows(results) {
-  const sorted = [...results].sort((a, b) => {
+function showProgressError(text) {
+  progress.hidden = false;
+  progress.classList.add("err");
+  progressText.textContent = `Error: ${text}`;
+}
+
+function renderAll() {
+  const active = checkResults.filter(r => r.status === "active");
+  const inactive = checkResults.length - active.length;
+  const fastest = active.length ? active.reduce((a, b) => a.latency_ms < b.latency_ms ? a : b) : null;
+
+  summary.innerHTML =
+    `<span class="ok">${active.length} active</span> · <span class="bad">${inactive} inactive</span> · ${checkResults.length} total` +
+    (fastest ? ` · fastest: <code>${esc(fastest.model)}</code> at ${fastest.latency_ms} ms` : "");
+
+  filtersEl.innerHTML = [
+    ["all", "All", checkResults.length],
+    ["active", "Active", active.length],
+    ["inactive", "Inactive", inactive],
+  ].map(([f, label, n]) =>
+    `<button type="button" class="chip ${filter === f ? "on" : ""}" onclick="setFilter('${f}')">${label} ${n}</button>`
+  ).join("");
+
+  document.getElementById("results-head").hidden = false;
+  document.getElementById("table-wrap").hidden = checkResults.length === 0;
+  document.getElementById("empty").hidden = checkResults.length > 0;
+  renderTable();
+}
+
+function setFilter(f) { filter = f; renderAll(); }
+
+function visibleResults() {
+  const list = filter === "all" ? [...checkResults] : checkResults.filter(r => r.status === filter);
+  return list.sort((a, b) => {
     if (a.status !== b.status) return a.status === "active" ? -1 : 1;
     return a.latency_ms - b.latency_ms;
   });
-  sortedResults = sorted;
+}
 
-  tbody.innerHTML = sorted.map((r, i) => `
-    <tr>
-      <td>${esc(r.model)}</td>
-      <td><span class="badge ${r.status}">${r.status === "active" ? "✓ Active" : "✗ Inactive"}</span></td>
-      <td>${r.latency_ms}ms</td>
-      <td>${r.prompt_tokens ?? "—"}</td>
-      <td>${r.completion_tokens ?? "—"}</td>
-      <td class="col-json">
-        <span class="json-toggle" onclick="toggleJson('req-${i}')">▶ payload</span>
-        <div id="req-${i}" class="json-block">${esc(formatJson(r.request))}</div>
-      </td>
-      <td class="col-json">
-        <span class="json-toggle" onclick="openResponseModal(${i})">▶ body</span>
-      </td>
+function renderTable() {
+  tbody.innerHTML = visibleResults().map(r => {
+    const id = r._id;
+    const hasTok = r.prompt_tokens != null || r.completion_tokens != null;
+    const tokens = hasTok ? `<span class="tokens">${r.prompt_tokens ?? "?"} in · ${r.completion_tokens ?? "?"} out tokens</span>` : "";
+    return `
+    <tr class="result">
+      <td class="model">${esc(r.model)}</td>
+      <td><span class="badge ${r.status === "active" ? "ok" : "bad"}">${r.status === "active" ? "Active" : "Inactive"}</span></td>
+      <td>${r.latency_ms} ms${tokens}</td>
       <td class="error-text">${r.error ? esc(r.error) : "—"}</td>
+      <td><button type="button" class="det-btn" data-detail="${id}">Details</button></td>
     </tr>
-  `).join("");
+    <tr class="detail-row" id="detail-${id}" hidden>
+      <td colspan="5">
+        <div class="detail-grid">
+          <div>
+            <h4>Request payload</h4>
+            <pre>${esc(formatJson(r.request))}</pre>
+          </div>
+          <div>
+            <h4>Response body</h4>
+            <pre>${esc(formatJson(r.response))}</pre>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
 }
 
-function toggleJson(id) {
-  const el = document.getElementById(id);
-  el.classList.toggle("open");
-  const toggle = el.previousElementSibling;
-  toggle.textContent = el.classList.contains("open") ? "▼" : "▶" + toggle.textContent.slice(1);
-}
+// Stable ids for detail rows (assigned once, survive sorting/filtering)
+let nextId = 0;
 
-let sortedResults = [];
-function openResponseModal(i) {
-  const r = sortedResults[i];
-  if (!r) return;
-  document.getElementById("response-modal-title").textContent = r.model || "Response";
-  const text = formatJson(r.response);
-  const ta = document.getElementById("response-modal-text");
-  ta.value = text === "—" ? "" : text;
-  document.getElementById("response-modal").classList.add("open");
-}
-function closeResponseModal() {
-  document.getElementById("response-modal").classList.remove("open");
-}
-function copyResponseModal() {
-  const ta = document.getElementById("response-modal-text");
-  navigator.clipboard.writeText(ta.value).then(() => {
-    const btn = event.target;
-    btn.textContent = "Copied!";
-    setTimeout(() => { btn.textContent = "Copy"; }, 1200);
-  });
-}
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape") closeResponseModal();
+tbody.addEventListener("click", e => {
+  const btn = e.target.closest("[data-detail]");
+  if (!btn) return;
+  const row = document.getElementById(`detail-${btn.dataset.detail}`);
+  row.hidden = !row.hidden;
+  btn.textContent = row.hidden ? "Details" : "Hide";
 });
-
-function parseLoose(s) {
-  try { return JSON.parse(s); } catch {}
-  // Lenient repair of JSON truncated mid-object (backend caps body length)
-  let stack = [], inStr = false, esc = false;
-  for (const c of s) {
-    if (inStr) {
-      if (esc) esc = false;
-      else if (c === "\\") esc = true;
-      else if (c === '"') inStr = false;
-    } else {
-      if (c === '"') inStr = true;
-      else if (c === "{" || c === "[") stack.push(c);
-      else if (c === "}" || c === "]") stack.pop();
-    }
-  }
-  let base = s;
-  if (esc) base = base.slice(0, -1);
-  if (inStr) base += '"';
-  for (let cut = 0; cut < 64; cut++) {
-    let tail = base.slice(0, base.length - cut).replace(/,\s*$/, "");
-    if (tail.endsWith(":")) tail += " null";
-    let out = tail;
-    for (let i = stack.length - 1; i >= 0; i--) out += stack[i] === "{" ? "}" : "]";
-    try { return JSON.parse(out); } catch {}
-  }
-  return null;
-}
 
 function formatJson(val) {
   if (!val) return "—";
   if (typeof val === "string") {
-    try { return JSON.stringify(JSON.parse(val), null, 2); } catch {}
-    return val.trim().split("\n").map(line => {
-      const s = line.trim();
-      if (s.startsWith("data:")) {
-        const p = s.slice(5).trim();
-        if (p === "") return "data";
-        try { return "data: " + JSON.stringify(JSON.parse(p), null, 2); } catch {}
-        const fixed = parseLoose(p);
-        if (fixed !== null) return "data: " + JSON.stringify(fixed, null, 2);
-        return s;
-      }
-      try { return JSON.stringify(JSON.parse(s), null, 2); } catch {}
-      const fixed = parseLoose(s);
-      if (fixed !== null) return JSON.stringify(fixed, null, 2);
-      return s;
-    }).join("\n");
+    try { return JSON.stringify(JSON.parse(val), null, 2); } catch { return val; }
   }
   return JSON.stringify(val, null, 2);
 }
 
 // ── Config Manager ─────────────────────────────────────────────────────
+const SYNC_HINTS = {
+  merge: "Adds every model that passed the check. Existing entries in the config are kept.",
+  replace: "Adds active models and removes every model in this provider that failed the check. Use after cleaning up a dead-model list.",
+  all: "Adds every model the endpoint lists, without running a check. Uses the endpoint and API key from the Check Models tab.",
+};
+
+function syncHint() {
+  document.getElementById("sync-hint").textContent = SYNC_HINTS[document.getElementById("sync-mode").value];
+}
+
 async function loadConfig() {
   const status = document.getElementById("config-status");
   const loading = document.getElementById("config-loading");
   const content = document.getElementById("config-content");
 
   status.textContent = "";
-  loading.style.display = "";
-  content.style.display = "none";
+  loading.hidden = false;
+  content.hidden = true;
 
   try {
     const resp = await fetch("/api/config");
     const data = await resp.json();
-    if (!data.ok) { loading.textContent = `Error: ${data.error}`; return; }
+    if (!data.ok) { loading.textContent = `Failed to load config: ${data.error}`; return; }
 
     configData = data.config;
     configProviders = data.providers;
 
-    // Populate provider dropdown
     const sel = document.getElementById("config-provider");
     sel.innerHTML = configProviders.map(p =>
       `<option value="${esc(p)}" ${p === currentProvider ? "selected" : ""}>${esc(p)}</option>`
     ).join("");
 
-    // Pre-select 9router if exists
     if (configProviders.includes("9router")) {
       currentProvider = "9router";
       sel.value = "9router";
@@ -422,11 +506,12 @@ async function loadConfig() {
       sel.value = currentProvider;
     }
 
-    loading.style.display = "none";
-    content.style.display = "";
+    loading.hidden = true;
+    content.hidden = false;
+    syncHint();
     renderConfigModels();
   } catch (e) {
-    loading.textContent = `Failed to load: ${e.message}`;
+    loading.textContent = `Failed to load config: ${e.message}`;
   }
 }
 
@@ -438,18 +523,25 @@ function renderConfigModels() {
   const countEl = document.getElementById("model-count");
 
   const sorted = Object.keys(models).sort();
-  countEl.textContent = `(${sorted.length} model${sorted.length !== 1 ? 's' : ''})`;
+  countEl.textContent = `(${sorted.length})`;
 
-  container.innerHTML = sorted.map(id => `
-    <span class="config-model-tag">
-      ${esc(id)}
-      <span class="remove" onclick="removeConfigModel('${esc(id)}')" title="Remove">×</span>
-    </span>
-  `).join("");
+  container.innerHTML = sorted.length === 0
+    ? '<span class="hint">No models configured for this provider yet. Add one below, or run a check and sync the results.</span>'
+    : sorted.map(id => `
+      <span class="tag">${esc(id)}
+        <button type="button" class="x" data-remove="${esc(id)}" title="Remove ${esc(id)}">×</button>
+      </span>`).join("");
+}
 
-  if (sorted.length === 0) {
-    container.innerHTML = '<span class="config-info">No models configured for this provider.</span>';
-  }
+document.getElementById("config-models").addEventListener("click", e => {
+  const btn = e.target.closest("[data-remove]");
+  if (btn) removeConfigModel(btn.dataset.remove);
+});
+
+function setConfigStatus(text, ok) {
+  const status = document.getElementById("config-status");
+  status.textContent = text;
+  status.className = `status ${ok ? "ok" : "bad"}`;
 }
 
 async function addConfigModel() {
@@ -457,7 +549,6 @@ async function addConfigModel() {
   const modelId = input.value.trim();
   if (!modelId) return;
 
-  const status = document.getElementById("config-status");
   try {
     const resp = await fetch("/api/config/models", {
       method: "POST",
@@ -466,22 +557,18 @@ async function addConfigModel() {
     });
     const data = await resp.json();
     if (data.ok) {
-      status.textContent = `✓ ${data.message}`;
-      status.style.color = "#3fb950";
+      setConfigStatus(data.message, true);
       input.value = "";
       await loadConfig();
     } else {
-      status.textContent = `✗ ${data.error}`;
-      status.style.color = "#f85149";
+      setConfigStatus(data.error, false);
     }
   } catch (e) {
-    status.textContent = `Error: ${e.message}`;
-    status.style.color = "#f85149";
+    setConfigStatus(`Error: ${e.message}`, false);
   }
 }
 
 async function removeConfigModel(modelId) {
-  const status = document.getElementById("config-status");
   try {
     const resp = await fetch("/api/config/models", {
       method: "POST",
@@ -490,21 +577,17 @@ async function removeConfigModel(modelId) {
     });
     const data = await resp.json();
     if (data.ok) {
-      status.textContent = `✓ ${data.message}`;
-      status.style.color = "#3fb950";
+      setConfigStatus(data.message, true);
       await loadConfig();
     } else {
-      status.textContent = `✗ ${data.error}`;
-      status.style.color = "#f85149";
+      setConfigStatus(data.error, false);
     }
   } catch (e) {
-    status.textContent = `Error: ${e.message}`;
-    status.style.color = "#f85149";
+    setConfigStatus(`Error: ${e.message}`, false);
   }
 }
 
 async function syncResultsToConfig() {
-  const status = document.getElementById("config-status");
   const mode = document.getElementById("sync-mode").value;
 
   if (mode === "all") {
@@ -512,13 +595,11 @@ async function syncResultsToConfig() {
     const api_key = document.getElementById("api_key").value.trim();
 
     if (!endpoint) {
-      status.textContent = "Please enter an endpoint URL in the Check Models tab first.";
-      status.style.color = "#f85149";
+      setConfigStatus("No endpoint set. Enter one in the Check Models tab first — 'Add All' imports directly from it.", false);
       return;
     }
 
-    status.textContent = "Fetching models from API...";
-    status.style.color = "#8b949e";
+    setConfigStatus("Fetching model list from the API…", true);
 
     try {
       const resp = await fetch("/api/config/sync", {
@@ -528,23 +609,19 @@ async function syncResultsToConfig() {
       });
       const data = await resp.json();
       if (data.ok) {
-        status.textContent = `✓ Synced! Added: ${data.added.length}, Total: ${data.total}`;
-        status.style.color = "#3fb950";
+        setConfigStatus(`Synced. Added ${data.added.length} new model${data.added.length === 1 ? "" : "s"}, ${data.total} total in ${currentProvider}.`, true);
         await loadConfig();
       } else {
-        status.textContent = `✗ ${data.error}`;
-        status.style.color = "#f85149";
+        setConfigStatus(data.error, false);
       }
     } catch (e) {
-      status.textContent = `Error: ${e.message}`;
-      status.style.color = "#f85149";
+      setConfigStatus(`Error: ${e.message}`, false);
     }
     return;
   }
 
   if (checkResults.length === 0) {
-    status.textContent = "No check results to sync. Run a check first.";
-    status.style.color = "#f85149";
+    setConfigStatus("No check results to sync. Run a check in the Check Models tab first.", false);
     return;
   }
 
@@ -559,16 +636,13 @@ async function syncResultsToConfig() {
     });
     const data = await resp.json();
     if (data.ok) {
-      status.textContent = `✓ Synced! Added: ${data.added.length}, Removed: ${data.removed.length}, Total: ${data.total}`;
-      status.style.color = "#3fb950";
+      setConfigStatus(`Synced. Added ${data.added.length}, removed ${data.removed.length}, ${data.total} total in ${currentProvider}.`, true);
       await loadConfig();
     } else {
-      status.textContent = `✗ ${data.error}`;
-      status.style.color = "#f85149";
+      setConfigStatus(data.error, false);
     }
   } catch (e) {
-    status.textContent = `Error: ${e.message}`;
-    status.style.color = "#f85149";
+    setConfigStatus(`Error: ${e.message}`, false);
   }
 }
 
