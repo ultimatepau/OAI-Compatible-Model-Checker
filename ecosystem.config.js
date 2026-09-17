@@ -15,8 +15,8 @@ module.exports = {
       env: {
         PYTHONUNBUFFERED: "1",
       },
-      error_file: "logs/err.log",
-      out_file: "logs/out.log",
+      // No error_file/out_file: default to ~/.pm2/logs/ — logs/ is gitignored,
+      // and a missing dir crash-looped the app to max_restarts on fresh clones.
       log_date_format: "YYYY-MM-DD HH:mm:ss",
       merge_logs: true,
     },
