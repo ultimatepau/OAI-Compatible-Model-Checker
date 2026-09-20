@@ -107,6 +107,8 @@
   .tag .x { border: none; background: none; padding: 0 0.3rem; font-size: 0.85rem; color: var(--muted); cursor: pointer; line-height: 1; }
   .tag .x:hover { color: var(--bad); }
   .sync-select { max-width: 380px; }
+  .tag.checkbox { cursor: pointer; padding: 0.25rem 0.6rem; gap: 0.4rem; }
+  .tag.checkbox input { width: auto; margin: 0; }
 
   [hidden] { display: none !important; }
 
@@ -158,6 +160,12 @@
     <p class="hint">Sent as <code>Authorization: Bearer …</code>. Leave empty for local servers (Ollama, LM Studio) that don't require auth.</p>
   </div>
 
+  <div class="field">
+    <label for="system_prompt">System Prompt</label>
+    <input type="text" id="system_prompt" placeholder="You are a helpful assistant." value="You are a helpful assistant." />
+    <p class="hint">Optional. Sent as a top-level <code>system</code> field in the request body alongside <code>messages</code>.</p>
+  </div>
+
   <div class="row">
     <div class="field">
       <label for="prompt">Test Prompt</label>
@@ -171,7 +179,21 @@
     </div>
   </div>
 
-  <button class="primary" id="checkBtn" type="button" onclick="startCheck()">Check Models</button>
+  <div class="inline" style="margin-bottom:1.1rem">
+    <button type="button" id="fetchModelsBtn" onclick="fetchModels()">Fetch Models</button>
+    <button class="primary" id="checkBtn" type="button" onclick="startCheck()" disabled>Check Models</button>
+  </div>
+
+  <div id="model-select" class="field" hidden>
+    <label>Models to check <span id="model-select-count" class="count"></span></label>
+    <div class="filters" style="margin-bottom:0.5rem">
+      <button type="button" class="chip" onclick="selectAllModels(true)">Select All</button>
+      <button type="button" class="chip" onclick="selectAllModels(false)">Select None</button>
+    </div>
+    <div id="model-checkboxes" class="tags"></div>
+  </div>
+
+  <div id="fetch-status" class="status" role="status"></div>
 
   <div id="progress" hidden>
     <div id="progress-text"></div>
@@ -236,6 +258,8 @@
 <script>
 // ── State ──────────────────────────────────────────────────────────────
 let checkResults = [];      // stored for config sync
+let fetchedModels = [];     // full model list from last fetch
+let selectedModels = new Set();
 let configData = null;
 let configProviders = [];
 let configEndpoints = [];   // [{name, baseURL}]
@@ -292,16 +316,99 @@ function switchTab(name) {
 }
 
 // ── Model Checker ──────────────────────────────────────────────────────
+function setFetchStatus(text, ok) {
+  const el = document.getElementById("fetch-status");
+  el.textContent = text;
+  el.className = `status ${ok === undefined ? "" : ok ? "ok" : "bad"}`;
+}
+
+async function fetchModels() {
+  const endpoint = document.getElementById("endpoint").value.trim();
+  const api_key = document.getElementById("api_key").value.trim();
+
+  if (!endpoint) {
+    setFetchStatus("Enter an endpoint URL first — fetching needs somewhere to ask.", false);
+    return;
+  }
+
+  const btn = document.getElementById("fetchModelsBtn");
+  btn.disabled = true;
+  setFetchStatus("Fetching model list…");
+  document.getElementById("checkBtn").disabled = true;
+  document.getElementById("model-select").hidden = true;
+
+  try {
+    const resp = await fetch("/api/models", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint, api_key }),
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      setFetchStatus(data.error, false);
+      return;
+    }
+    fetchedModels = data.models;
+    selectedModels = new Set(fetchedModels);
+    if (!fetchedModels.length) {
+      setFetchStatus("The endpoint listed zero models. Check the endpoint URL and API key.", false);
+      return;
+    }
+    setFetchStatus(`Fetched ${fetchedModels.length} model${fetchedModels.length === 1 ? "" : "s"}.`, true);
+    renderModelCheckboxes();
+    document.getElementById("model-select").hidden = false;
+    document.getElementById("checkBtn").disabled = false;
+  } catch (e) {
+    setFetchStatus(`Error: ${e.message}`, false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderModelCheckboxes() {
+  const container = document.getElementById("model-checkboxes");
+  container.innerHTML = fetchedModels.map(id => `
+    <label class="tag checkbox">
+      <input type="checkbox" data-model="${esc(id)}" ${selectedModels.has(id) ? "checked" : ""} />
+      ${esc(id)}
+    </label>`).join("");
+  document.getElementById("model-select-count").textContent = `(${selectedModels.size}/${fetchedModels.length} selected)`;
+}
+
+document.getElementById("model-checkboxes").addEventListener("change", e => {
+  const cb = e.target.closest("input[data-model]");
+  if (!cb) return;
+  if (cb.checked) selectedModels.add(cb.dataset.model);
+  else selectedModels.delete(cb.dataset.model);
+  document.getElementById("model-select-count").textContent = `(${selectedModels.size}/${fetchedModels.length} selected)`;
+  document.getElementById("checkBtn").disabled = selectedModels.size === 0;
+});
+
+function selectAllModels(all) {
+  selectedModels = new Set(all ? fetchedModels : []);
+  renderModelCheckboxes();
+  document.getElementById("checkBtn").disabled = selectedModels.size === 0;
+}
+
 async function startCheck() {
   const endpoint = document.getElementById("endpoint").value.trim();
   const api_key = document.getElementById("api_key").value.trim();
   const prompt = document.getElementById("prompt").value.trim() || "hi";
   const max_tokens = parseInt(document.getElementById("max_tokens").value) || 10;
+  const system = document.getElementById("system_prompt").value.trim();
+  const models = Array.from(selectedModels);
 
   if (!endpoint) {
     progress.hidden = false;
     progress.classList.add("err");
     progressText.textContent = "Enter an endpoint URL first — the checker needs somewhere to send requests.";
+    return;
+  }
+
+  if (!models.length) {
+    progress.hidden = false;
+    progress.classList.add("err");
+    progressText.textContent = "Fetch models and select at least one to check.";
     return;
   }
 
@@ -316,14 +423,14 @@ async function startCheck() {
   progress.hidden = false;
   progress.classList.remove("err");
   barFill.style.width = "0%";
-  progressText.textContent = "Fetching models…";
+  progressText.textContent = `Testing ${models.length} selected model${models.length === 1 ? "" : "s"}…`;
   checkBtn.disabled = true;
 
   try {
     const resp = await fetch("/api/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint, api_key, prompt, max_tokens }),
+      body: JSON.stringify({ endpoint, api_key, prompt, max_tokens, system, models }),
     });
 
     const reader = resp.body.getReader();
