@@ -35,6 +35,29 @@ async def index():
     return HTML_PATH.read_text(encoding="utf-8")
 
 
+async def fetch_models(endpoint: str, api_key: str) -> list[str]:
+    """Fetch the list of model ids from an OpenAI-compatible endpoint."""
+    headers = {"Authorization": f"Bearer {api_key}"}
+    async with httpx.AsyncClient(timeout=None) as client:
+        resp = await client.get(f"{endpoint}/v1/models", headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+    return [m["id"] for m in data.get("data", [])]
+
+
+@app.post("/api/models")
+async def list_models(request: Request):
+    body = await request.json()
+    endpoint = body["endpoint"].rstrip("/")
+    api_key = body.get("api_key", "")
+
+    try:
+        models = await fetch_models(endpoint, api_key)
+        return {"ok": True, "models": models}
+    except Exception as e:
+        return {"ok": False, "error": f"Failed to fetch models: {str(e)}"}
+
+
 @app.post("/api/check")
 async def check_models(request: Request):
     body = await request.json()
@@ -42,22 +65,23 @@ async def check_models(request: Request):
     api_key = body.get("api_key", "")
     prompt = body.get("prompt", "hi")
     max_tokens = body.get("max_tokens", 10)
+    system = body.get("system", "")
+    selected_models = body.get("models")
 
     headers = {"Authorization": f"Bearer {api_key}"}
     semaphore = asyncio.Semaphore(5)
 
     async def event_generator():
-        # 1. Fetch model list
-        async with httpx.AsyncClient(timeout=None) as client:
+        # 1. Use the caller's model selection, or fetch the full list
+        if selected_models:
+            models = selected_models
+        else:
             try:
-                resp = await client.get(f"{endpoint}/v1/models", headers=headers)
-                resp.raise_for_status()
-                data = resp.json()
+                models = await fetch_models(endpoint, api_key)
             except Exception as e:
                 yield {"event": "message", "data": f'{{"type":"error","error":"Failed to fetch models: {str(e)}"}}'}
                 return
 
-        models = [m["id"] for m in data.get("data", [])]
         yield {"event": "message", "data": f'{{"type":"models","data":{__import__("json").dumps(models)}}}'}
 
         # 2. Test each model
@@ -72,6 +96,8 @@ async def check_models(request: Request):
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": max_tokens,
                 }
+                if system:
+                    payload["system"] = system
                 resp_body = None
                 prompt_tokens = None
                 completion_tokens = None
@@ -208,16 +234,11 @@ async def sync_models_to_config(request: Request):
             if not endpoint:
                 return {"ok": False, "error": "Endpoint URL is required for 'all' mode"}
 
-            headers = {"Authorization": f"Bearer {api_key}"}
-            async with httpx.AsyncClient(timeout=None) as client:
-                try:
-                    resp = await client.get(f"{endpoint}/v1/models", headers=headers)
-                    resp.raise_for_status()
-                    data = resp.json()
-                except Exception as e:
-                    return {"ok": False, "error": f"Failed to fetch models: {str(e)}"}
+            try:
+                all_models = await fetch_models(endpoint, api_key)
+            except Exception as e:
+                return {"ok": False, "error": f"Failed to fetch models: {str(e)}"}
 
-            all_models = [m["id"] for m in data.get("data", [])]
             for mid in all_models:
                 if mid not in models:
                     models[mid] = {"name": mid}
