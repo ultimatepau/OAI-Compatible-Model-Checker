@@ -208,7 +208,7 @@
   <div class="table-wrap" id="table-wrap" hidden>
     <table>
       <thead>
-        <tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">Error</th><th scope="col"><span class="sr-only"></span>Details</th></tr>
+        <tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">Tok/s</th><th scope="col">Error</th><th scope="col"><span class="sr-only"></span>Details</th></tr>
       </thead>
       <tbody id="results"></tbody>
     </table>
@@ -533,11 +533,12 @@ function renderTable() {
       <td class="model">${esc(r.model)}</td>
       <td><span class="badge ${r.status === "active" ? "ok" : "bad"}">${r.status === "active" ? "Active" : "Inactive"}</span></td>
       <td>${r.latency_ms} ms${tokens}</td>
+      <td>${r.tokens_per_sec != null ? r.tokens_per_sec : "—"}</td>
       <td class="error-text">${r.error ? esc(r.error) : "—"}</td>
       <td><button type="button" class="det-btn" data-detail="${id}">Details</button></td>
     </tr>
     <tr class="detail-row" id="detail-${id}" hidden>
-      <td colspan="5">
+      <td colspan="6">
         <div class="detail-grid">
           <div>
             <h4>Request payload</h4>

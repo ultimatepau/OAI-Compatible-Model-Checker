@@ -30,6 +30,52 @@ def log_call(model, request_payload, response_text, error=None):
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def parse_completion_response(raw: str):
+    """Parse a chat completion response that may be plain JSON or an SSE stream.
+
+    Returns (data, content): the last decoded JSON chunk (or full body) and the
+    concatenated streamed text (None when the response was not streamed).
+    """
+    try:
+        return json.loads(raw), None
+    except Exception:
+        pass
+    data = None
+    parts = []
+    usage = None
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line.startswith("data:"):
+            continue
+        payload = line[5:].strip()
+        if not payload or payload == "[DONE]":
+            continue
+        try:
+            chunk = json.loads(payload)
+        except Exception:
+            continue
+        data = chunk
+        if chunk.get("usage"):
+            usage = chunk["usage"]
+        choices = chunk.get("choices") or []
+        if choices:
+            piece = (choices[0].get("delta") or {}).get("content")
+            if piece:
+                parts.append(piece)
+        else:
+            ctype = chunk.get("type")
+            delta = chunk.get("delta") or {}
+            if ctype == "content_block_delta" and delta.get("type") == "text_delta":
+                piece = delta.get("text")
+                if piece:
+                    parts.append(piece)
+            elif ctype == "message_delta" and chunk.get("usage"):
+                usage = chunk["usage"]
+    content = "".join(parts) or None
+    if usage and data is not None:
+        data = {**data, "usage": usage}
+    return data, content
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return HTML_PATH.read_text(encoding="utf-8")
@@ -114,38 +160,36 @@ async def check_models(request: Request):
                         prompt_tokens = len(enc.encode(prompt))
                         data = None
                         try:
-                            data = resp.json()
+                            data, streamed = parse_completion_response(resp.text)
                         except Exception:
-                            cleaned = resp.text.strip()
-                            done_idx = cleaned.rfind("data: [DONE]")
-                            if done_idx != -1:
-                                cleaned = cleaned[:done_idx].strip()
-                            try:
-                                data = json.loads(cleaned)
-                            except Exception:
-                                pass
+                            data, streamed = None, None
                         if data:
                             try:
                                 usage = data.get("usage") or {}
                                 if usage.get("prompt_tokens") is not None:
                                     prompt_tokens = usage["prompt_tokens"]
+                                elif usage.get("input_tokens") is not None:
+                                    prompt_tokens = usage["input_tokens"]
                                 if usage.get("completion_tokens") is not None:
                                     completion_tokens = usage["completion_tokens"]
+                                elif usage.get("output_tokens") is not None:
+                                    completion_tokens = usage["output_tokens"]
                                 else:
-                                    content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+                                    content = streamed if streamed is not None else (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
                                     completion_tokens = len(enc.encode(content))
                             except Exception:
                                 pass
                         resp.raise_for_status()
                         done_count += 1
+                        tps = round(completion_tokens / (latency / 1000), 1) if completion_tokens is not None and latency else None
                         log_call(model_id, payload, resp_body)
-                        return {"type": "result", "model": model_id, "status": "active", "latency_ms": latency, "error": None, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
+                        return {"type": "result", "model": model_id, "status": "active", "latency_ms": latency, "tokens_per_sec": tps, "error": None, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
                 except Exception as e:
                     latency = int((time.monotonic() - start) * 1000)
                     done_count += 1
                     err_msg = str(e)[:200]
                     log_call(model_id, payload, resp_body, error=err_msg)
-                    return {"type": "result", "model": model_id, "status": "inactive", "latency_ms": latency, "error": err_msg, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
+                    return {"type": "result", "model": model_id, "status": "inactive", "latency_ms": latency, "tokens_per_sec": None, "error": err_msg, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
 
         # Run tests concurrently, yield results as they complete
         tasks = {asyncio.create_task(test_model(m)): m for m in models}
