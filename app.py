@@ -106,6 +106,27 @@ def _text_of(data):
     return None
 
 
+# Some proxies (e.g. midas) silently answer with a fallback model when the asked
+# one errors, prefixing a notice; the HTTP status stays 200. Detect only near the
+# start and only when both phrases appear, so a model that merely discusses
+# fallbacks is not flagged.
+_FALLBACK = re.compile(
+    r"Model\s+`?([^`\s]+)`?\s+encountered an error(?:\s*\(([^)]*)\))?.*?fallback model\s+`?([^`\s.]+)`?",
+    re.I | re.S)
+
+def detect_fallback(text):
+    """Return {"failed": "<model>", "served_by": "<model>", "reason": "<HTTP 400 Bad Request>"}
+    when the reply starts with a proxy fallback notice, else None."""
+    if not isinstance(text, str):
+        return None
+    m = _FALLBACK.search(text.lstrip()[:300])
+    return {"failed": m.group(1), "served_by": m.group(3), "reason": m.group(2)} if m else None
+
+def fallback_error(fb):
+    """User-facing error string for a detected fallback reply."""
+    why = f" ({fb['failed']} returned {fb['reason']})" if fb["reason"] else ""
+    return f"served by fallback model {fb['served_by']}{why}"
+
 def compute_tps(tokens, latency_ms, ttft_ms, streamed, floor_ms=50):
     """Tokens/sec over the generation window; whole latency when not streamed or the window is degenerate."""
     if tokens is None:
