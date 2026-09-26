@@ -90,6 +90,12 @@
   .badge.ok { background: rgba(76,195,138,0.14); color: var(--ok); }
   .badge.bad { background: rgba(229,72,77,0.14); color: var(--bad); }
   td .tokens { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+  .capdot { font-size: 0.72rem; margin-right: 0.15rem; }
+  .capdot.ok { color: var(--ok); }
+  .capdot.bad { color: var(--bad); }
+  .capdot.neutral { color: var(--muted); }
+  input[type=checkbox] { width: auto; }
+  .opt { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 400; margin: 0; }
   td.error-text { color: var(--bad); font-size: 0.78rem; max-width: 320px; word-break: break-word; }
   .det-btn { font-size: 0.78rem; padding: 0.2rem 0.6rem; }
   tr.detail-row td { background: var(--surface); padding: 0.75rem 0.85rem; }
@@ -141,7 +147,7 @@
       <li>Fetches <code>GET /v1/models</code> from the endpoint to list available models.</li>
       <li>Sends your prompt to every model via <code>POST /v1/chat/completions</code> — 5 requests in parallel, 15s timeout each.</li>
       <li><b>Active</b> = any HTTP 200 response. <b>Inactive</b> = connection error, timeout, or non-200.</li>
-      <li>Latency measures the full response, not time to first token.</li>
+      <li>Requests are streamed: <b>TTFT</b> is time to the first visible token, latency is the full response, and tok/s is measured over the generation phase.</li>
     </ol>
   </details>
 
@@ -179,6 +185,17 @@
     </div>
   </div>
 
+  <div class="field">
+    <label>Extra checks</label>
+    <div class="inline" style="align-items:center;flex-wrap:wrap">
+      <label class="opt" for="runs">Runs per model <input type="number" id="runs" value="1" min="1" max="5" style="width:4.5rem;flex:0 0 auto" /></label>
+      <label class="opt"><input type="checkbox" class="probe" value="tools" /> Tools</label>
+      <label class="opt"><input type="checkbox" class="probe" value="json" /> JSON</label>
+      <label class="opt"><input type="checkbox" class="probe" value="vision" /> Vision</label>
+    </div>
+    <p class="hint">Runs above 1 flag flaky models (latency is the median). Probes send extra requests per model, so they are opt-in.</p>
+  </div>
+
   <div class="inline" style="margin-bottom:1.1rem">
     <button type="button" id="fetchModelsBtn" onclick="fetchModels()">Fetch Models</button>
     <button class="primary" id="checkBtn" type="button" onclick="startCheck()" disabled>Check Models</button>
@@ -208,7 +225,7 @@
   <div class="table-wrap" id="table-wrap" hidden>
     <table>
       <thead>
-        <tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">Tok/s</th><th scope="col">Error</th><th scope="col"><span class="sr-only"></span>Details</th></tr>
+        <tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">TTFT</th><th scope="col">Tok/s</th><th scope="col">Caps</th><th scope="col">Error</th><th scope="col"><span class="sr-only"></span>Details</th></tr>
       </thead>
       <tbody id="results"></tbody>
     </table>
@@ -397,6 +414,8 @@ async function startCheck() {
   const max_tokens = parseInt(document.getElementById("max_tokens").value) || 10;
   const system = document.getElementById("system_prompt").value.trim();
   const models = Array.from(selectedModels);
+  const runs = Math.min(5, Math.max(1, parseInt(document.getElementById("runs").value) || 1));
+  const capabilities = Array.from(document.querySelectorAll(".probe:checked")).map(c => c.value);
 
   if (!endpoint) {
     progress.hidden = false;
@@ -430,7 +449,7 @@ async function startCheck() {
     const resp = await fetch("/api/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint, api_key, prompt, max_tokens, system, models }),
+      body: JSON.stringify({ endpoint, api_key, prompt, max_tokens, system, models, runs, capabilities }),
     });
 
     const reader = resp.body.getReader();
@@ -528,17 +547,28 @@ function renderTable() {
     const id = r._id;
     const hasTok = r.prompt_tokens != null || r.completion_tokens != null;
     const tokens = hasTok ? `<span class="tokens">${r.prompt_tokens ?? "?"} in · ${r.completion_tokens ?? "?"} out tokens</span>` : "";
+    const runs = r.runs_total > 1 ? `<span class="tokens">${r.runs_ok}/${r.runs_total} ok${r.flaky ? " · flaky" : ""}</span>` : "";
+    const ttft = r.ttft_ms != null ? `${r.ttft_ms} ms` : "—";
+    const caps = r.capabilities || {};
+    const capKeys = ["stream", "tools", "json", "vision", "reasoning"];
+    const capsHtml = capKeys.map(k => {
+      if (!(k in caps)) return "";
+      const v = caps[k] ? "ok" : "bad";
+      return `<span class="capdot ${v}" title="${k}">●</span>`;
+    }).join(" ") || "—";
     return `
     <tr class="result">
       <td class="model">${esc(r.model)}</td>
       <td><span class="badge ${r.status === "active" ? "ok" : "bad"}">${r.status === "active" ? "Active" : "Inactive"}</span></td>
-      <td>${r.latency_ms} ms${tokens}</td>
+      <td>${r.latency_ms} ms${tokens}${runs}</td>
+      <td>${ttft}</td>
       <td>${r.tokens_per_sec != null ? r.tokens_per_sec : "—"}</td>
+      <td>${capsHtml}</td>
       <td class="error-text">${r.error ? esc(r.error) : "—"}</td>
       <td><button type="button" class="det-btn" data-detail="${id}">Details</button></td>
     </tr>
     <tr class="detail-row" id="detail-${id}" hidden>
-      <td colspan="6">
+      <td colspan="8">
         <div class="detail-grid">
           <div>
             <h4>Request payload</h4>
