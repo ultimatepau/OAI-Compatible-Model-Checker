@@ -238,6 +238,7 @@
           <th scope="col" data-sort="ttft_ms">TTFT</th>
           <th scope="col" data-sort="tokens_per_sec">Tok/s</th>
           <th scope="col">Caps</th>
+          <th scope="col" data-sort="_cost">Cost</th>
           <th scope="col" data-sort="error">Error</th>
           <th scope="col"><span class="sr-only"></span>Details</th>
         </tr>
@@ -300,6 +301,8 @@ let filter = "all";
 let totalCount = 0, doneCount = 0;
 let sortKey = "latency_ms";
 let sortDir = 1;
+let prices = {};            // model -> {in, out} USD per 1M tokens
+try { prices = JSON.parse(localStorage.getItem("checker_prices") || "{}"); } catch {}
 
 const tbody = document.getElementById("results");
 const progress = document.getElementById("progress");
@@ -551,8 +554,16 @@ function renderAll() {
 
 function setFilter(f) { filter = f; renderAll(); }
 
+function costOf(r) {
+  const p = prices[r.model];
+  return (p && r.prompt_tokens != null && r.completion_tokens != null)
+    ? (r.prompt_tokens / 1e6) * p.in + (r.completion_tokens / 1e6) * p.out
+    : Infinity;
+}
+
 function visibleResults() {
   const list = filter === "all" ? [...checkResults] : checkResults.filter(r => r.status === filter);
+  list.forEach(r => { r._cost = costOf(r); }); // before sorting so Cost is sortable
   const missing = v => v == null || v === Infinity;
   return list.sort((a, b) => {
     if (a.status !== b.status) return a.status === "active" ? -1 : 1;
@@ -585,11 +596,14 @@ function renderTable() {
       <td>${ttft}</td>
       <td>${r.tokens_per_sec != null ? r.tokens_per_sec : "—"}</td>
       <td>${capsHtml}</td>
+      <td>${r._cost !== Infinity
+        ? `<a href="#" data-price="${id}" title="Click to edit price">$${r._cost.toFixed(6)}</a>`
+        : `<a href="#" data-price="${id}" class="hint" title="Set price per 1M tokens">set price</a>`}</td>
       <td class="error-text">${r.error ? esc(r.error) : "—"}</td>
       <td><button type="button" class="det-btn" data-detail="${id}">Details</button></td>
     </tr>
     <tr class="detail-row" id="detail-${id}" hidden>
-      <td colspan="8">
+      <td colspan="9">
         <div class="detail-grid">
           <div>
             <h4>Request payload</h4>
@@ -609,6 +623,13 @@ function renderTable() {
 let nextId = 0;
 
 tbody.addEventListener("click", e => {
+  const price = e.target.closest("[data-price]");
+  if (price) {
+    e.preventDefault();
+    const r = checkResults.find(x => x._id === Number(price.dataset.price));
+    if (r) editPrice(r.model);
+    return;
+  }
   const btn = e.target.closest("[data-detail]");
   if (!btn) return;
   const row = document.getElementById(`detail-${btn.dataset.detail}`);
@@ -649,6 +670,17 @@ function exportResults(kind) {
   const a = document.createElement("a");
   a.href = url; a.download = name; a.click();
   URL.revokeObjectURL(url);
+}
+
+function editPrice(model) {
+  const cur = prices[model] || { in: 0, out: 0 };
+  const inp = prompt(`Price for ${model} (USD per 1M tokens)\nFormat: in,out\ne.g. 0.15,0.60`, `${cur.in},${cur.out}`);
+  if (inp === null) return;
+  const [i, o] = inp.split(",").map(x => parseFloat(x.trim()));
+  if (isNaN(i) || isNaN(o)) { alert("Invalid format. Use: in,out"); return; }
+  prices[model] = { in: i, out: o };
+  try { localStorage.setItem("checker_prices", JSON.stringify(prices)); } catch {}
+  renderAll();
 }
 
 function formatJson(val) {
