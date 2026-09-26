@@ -17,6 +17,7 @@ Alat berbasis web yang ringan dan berjalan secara lokal, dirancang untuk memerik
 - **Metrik Streaming**: TTFT (time to first token) dan tok/s asli, diukur pada fase generasi yang di-stream.
 - **Deteksi Flakiness**: 1–5 run per model; latency adalah median, kegagalan parsial ditandai *flaky*.
 - **Uji Kemampuan** (opsional): tool calling, JSON mode, vision; model reasoning terdeteksi dari blok thinking.
+- **Deteksi Fallback Proxy**: balasan yang diam-diam dijawab model cadangan oleh proxy dihitung gagal, bukan sukses.
 - **Riwayat**: setiap pengecekan disimpan di SQLite (`checker_history.db`) dan bisa dilihat di tab History.
 - **Sortir, Ekspor, Biaya**: kolom bisa diurutkan, ekspor CSV/JSON, estimasi biaya opsional (harga disimpan di browser; klik sel Cost untuk mengubah).
 - **Retest & Badge**: uji ulang hanya model inactive; badge untuk model yang sudah ada di konfigurasi OpenCode.
@@ -127,6 +128,7 @@ A lightweight, local web-based tool designed to check compatibility and status o
 - **Streaming Metrics**: TTFT (time to first token) and true tok/s, measured over the streamed generation phase.
 - **Flakiness Detection**: 1–5 runs per model; latency is the median and partial failures are flagged as flaky.
 - **Capability Probes** (opt-in): tool calling, JSON mode, vision; reasoning models are detected from thinking blocks.
+- **Proxy Fallback Detection**: replies silently answered by a proxy's backup model count as failures, not successes.
 - **History**: every check is stored in SQLite (`checker_history.db`) and browsable in the History tab.
 - **Sort, Export, Cost**: sortable columns, CSV/JSON export, optional cost estimation (prices are stored in the browser; click a Cost cell to edit).
 - **Retest & Badge**: retest only inactive models; badge for models already in the OpenCode config.
