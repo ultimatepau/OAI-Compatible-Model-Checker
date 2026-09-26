@@ -112,3 +112,19 @@ def test_vision_probe_reports_missing_image_file(monkeypatch, tmp_path):
     monkeypatch.setattr(appmod, "VISION_IMAGE_PATH", tmp_path / "nope.png")
     out, d = probe_details(lambda req: (_ for _ in ()).throw(AssertionError("must not call upstream")), ["vision"])
     assert out == {"vision": False} and "not found" in d["vision"]["reason"]
+
+# ── proxy fallback notices ──────────────────────────────────────────────
+FB = ("⚠️ Model `Kimi-K2.6` encountered an error (HTTP 400 Bad Request). "
+      "This response was generated using the fallback model `mimo`.\n\n")
+
+def test_fallback_reply_fails_every_probe():
+    # vision: the trailing text would pass the vision judge on its own
+    reply = FB + "A cartoon avatar of a young man with spiky black hair."
+    out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": reply}}]}), ["vision"])
+    assert out == {"vision": False}
+    assert "fallback model mimo" in d["vision"]["reason"]
+    # a fallback reply must not turn tools/json green either
+    for kind, body in (("tools", '{"ok": true}'), ("json", '{"ok": true}')):
+        out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": FB + body}}]}), [kind])
+        assert out == {kind: False}
+        assert "fallback model mimo" in d[kind]["reason"]

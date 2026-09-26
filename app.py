@@ -639,9 +639,14 @@ async def run_probes(client, url, headers, model_id, kinds, details=None, log=No
                                          json=payload)
                 status, text = resp.status_code, resp.text[:2000]
                 data, content = parse_completion_response(resp.text)
-                ok = _judge_capability(kind, status, data, content)
-                if not ok:
-                    reason = _probe_reason(kind, status, text, data, content)
+                fb = detect_fallback(content or _text_of(data))
+                if fb:  # answered by a fallback model: the probe never reached the asked one
+                    ok = False
+                    reason = fallback_error(fb)
+                else:
+                    ok = _judge_capability(kind, status, data, content)
+                    if not ok:
+                        reason = _probe_reason(kind, status, text, data, content)
         except Exception as e:
             reason = f"{type(e).__name__}: {e}"[:300]
         out[kind] = ok
