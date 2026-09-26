@@ -139,6 +139,7 @@
 <div class="tabs">
   <button class="tab active" type="button" onclick="switchTab('checker')">Check Models</button>
   <button class="tab" type="button" onclick="switchTab('config')">Config Manager</button>
+  <button class="tab" type="button" onclick="switchTab('history')">History</button>
 </div>
 
 <!-- Checker Panel -->
@@ -286,6 +287,14 @@
   </div>
 </div>
 
+<!-- History Panel -->
+<div id="panel-history" class="panel">
+  <div class="filters" style="margin-bottom:0.8rem">
+    <button type="button" class="chip" onclick="loadHistory()">Refresh</button>
+  </div>
+  <div id="history-list"></div>
+</div>
+
 </div>
 
 <script>
@@ -350,6 +359,7 @@ function switchTab(name) {
   document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add("active");
   document.getElementById(`panel-${name}`).classList.add("active");
   if (name === "config") loadConfig();
+  if (name === "history") loadHistory();
 }
 
 // ── Model Checker ──────────────────────────────────────────────────────
@@ -721,6 +731,56 @@ function formatJson(val) {
     try { return JSON.stringify(JSON.parse(val), null, 2); } catch { return val; }
   }
   return JSON.stringify(val, null, 2);
+}
+
+async function loadHistory() {
+  const el = document.getElementById("history-list");
+  try {
+    const resp = await fetch("/api/history?limit=50");
+    const data = await resp.json();
+    if (!data.ok || !data.runs.length) {
+      el.innerHTML = '<div class="empty">No saved runs yet.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>When</th><th>Endpoint</th><th>Prompt</th><th>Total</th><th>Active</th><th></th></tr></thead>
+      <tbody>${data.runs.map(r => `
+        <tr class="result">
+          <td>${esc(r.ts)}</td>
+          <td class="model">${esc(r.endpoint)}</td>
+          <td>${esc((r.prompt || "").slice(0, 40))}</td>
+          <td>${r.total}</td>
+          <td><span class="badge ok">${r.active}</span></td>
+          <td>
+            <button type="button" class="det-btn" onclick="viewHistoryRun(${r.id})">View</button>
+            <button type="button" class="det-btn" onclick="deleteHistoryRun(${r.id})">Delete</button>
+          </td>
+        </tr>`).join("")}</tbody></table></div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Failed to load history: ${esc(e.message)}</div>`;
+  }
+}
+
+async function viewHistoryRun(id) {
+  try {
+    const resp = await fetch(`/api/history/${id}`);
+    const data = await resp.json();
+    if (!data.ok) return;
+    checkResults = data.results.map((r, i) => {
+      let capabilities = {};   // stored as a JSON string in SQLite
+      try { capabilities = (typeof r.capabilities === "string" ? JSON.parse(r.capabilities) : r.capabilities) || {}; } catch {}
+      return { ...r, capabilities, _id: i };
+    });
+    filter = "all";
+    switchTab("checker");
+    renderAll();
+  } catch {}
+}
+
+async function deleteHistoryRun(id) {
+  if (!confirm("Delete this run?")) return;
+  await fetch(`/api/history/${id}`, { method: "DELETE" });
+  loadHistory();
 }
 
 // ── Config Manager ─────────────────────────────────────────────────────
