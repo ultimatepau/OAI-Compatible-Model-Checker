@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 
@@ -77,3 +78,20 @@ def test_stream_completion_tolerates_glued_done_marker():
     from tests.test_parse import GLUED
     r = run_with(lambda request: httpx.Response(200, content=GLUED))
     assert r["ok"] is True and r["content"] == "hi" and r["usage"]["completion_tokens"] == 2
+
+# ── proxy fallback notices ──────────────────────────────────────────────
+FB = ("⚠️ Model `Kimi-K2.6` encountered an error (HTTP 400 Bad Request). "
+      "This response was generated using the fallback model `mimo`.\n\nyes")
+FB_SSE = 'data: {"choices":[{"delta":{"content":' + json.dumps(FB) + '}}]}\ndata: [DONE]\n'
+
+def test_fallback_sse_reply_is_not_ok():
+    r = run_with(lambda request: httpx.Response(200, content=FB_SSE))
+    assert r["ok"] is False
+    assert "fallback model mimo" in r["error"]
+    assert r["status"] == 200 and r["retry_stream"] is False
+    assert "fallback model" in r["body"]
+
+def test_fallback_plain_json_reply_is_not_ok():
+    body = {"choices": [{"message": {"content": FB}}]}
+    r = run_with(lambda request: httpx.Response(200, json=body))
+    assert r["ok"] is False and "fallback model mimo" in r["error"]

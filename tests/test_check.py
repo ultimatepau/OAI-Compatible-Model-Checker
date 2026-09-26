@@ -109,3 +109,21 @@ def test_probe_log_omits_image_bytes(monkeypatch, tmp_path):
     assert r["capabilities"] == {"vision": True}
     log = (tmp_path / "checker.log").read_text()
     assert "base64," not in log and "image omitted" in log
+
+# ── proxy fallback replies count as failures ────────────────────────────
+from tests.test_stream import FB_SSE  # noqa: E402
+
+def test_check_treats_fallback_reply_as_inactive(monkeypatch, tmp_path):
+    (r,) = check(monkeypatch, tmp_path, lambda req: httpx.Response(200, content=FB_SSE))
+    assert r["status"] == "inactive"
+    assert "served by fallback model mimo" in r["error"]
+    assert "fallback model" in r["response"]  # full reply text for Details
+
+def test_check_flaky_when_one_run_falls_back(monkeypatch, tmp_path):
+    calls = []
+
+    def handler(req):
+        calls.append(1)
+        return httpx.Response(200, content=FB_SSE) if len(calls) == 1 else httpx.Response(200, content=SSE)
+    (r,) = check(monkeypatch, tmp_path, handler, runs=2)
+    assert r["status"] == "active" and r["flaky"] is True and r["runs_ok"] == 1

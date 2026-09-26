@@ -517,6 +517,12 @@ async def stream_completion(client, url, headers, payload):
             return {"ok": False, "status": 200, "latency_ms": latency, "ttft_ms": None,
                     "content": None, "usage": {}, "streamed": got_sse, "reasoning": False,
                     "error": str(msg or err)[:200], "body": raw, "retry_stream": False}
+        fb = detect_fallback(content)
+        if fb:  # proxy answered with a fallback model: the asked model really failed
+            return {"ok": False, "status": 200, "latency_ms": latency, "ttft_ms": ttft,
+                    "content": content, "usage": usage, "streamed": got_sse,
+                    "reasoning": reasoning, "error": fallback_error(fb), "body": raw,
+                    "retry_stream": False}
         return {"ok": True, "status": 200, "latency_ms": latency, "ttft_ms": ttft,
                 "content": content, "usage": usage, "streamed": got_sse,
                 "reasoning": reasoning, "error": None, "retry_stream": False}
