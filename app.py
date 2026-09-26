@@ -9,6 +9,8 @@ from fastapi.responses import HTMLResponse
 from pathlib import Path
 from sse_starlette.sse import EventSourceResponse
 
+import db
+
 app = FastAPI()
 
 enc = tiktoken.get_encoding("cl100k_base")
@@ -133,6 +135,7 @@ async def check_models(request: Request):
         # 2. Test each model
         total = len(models)
         done_count = 0
+        all_results = []
 
         async def test_model(model_id: str):
             nonlocal done_count
@@ -206,7 +209,13 @@ async def check_models(request: Request):
         tasks = {asyncio.create_task(test_model(m)): m for m in models}
         for coro in asyncio.as_completed(tasks):
             result = await coro
+            all_results.append(result)
             yield {"event": "message", "data": __import__("json").dumps(result)}
+
+        try:
+            db.record_run(endpoint, prompt, max_tokens, all_results)
+        except Exception:
+            pass
 
         yield {"event": "message", "data": '{"type":"done"}'}
 
@@ -470,3 +479,24 @@ async def run_probes(client, url, headers, model_id, kinds):
         except Exception:
             out[kind] = False
     return out
+
+
+# ── History API ──────────────────────────────────────────────────────────
+
+@app.get("/api/history")
+async def api_history(limit: int = 20):
+    return {"ok": True, "runs": db.list_runs(limit)}
+
+
+@app.get("/api/history/{run_id}")
+async def api_history_run(run_id: int):
+    run, rows = db.get_run(run_id)
+    if run is None:
+        return {"ok": False, "error": "not found"}
+    return {"ok": True, "run": run, "results": rows}
+
+
+@app.delete("/api/history/{run_id}")
+async def api_history_delete(run_id: int):
+    db.delete_run(run_id)
+    return {"ok": True}
