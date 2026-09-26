@@ -98,3 +98,14 @@ def test_check_returns_probe_details_and_logs_probe_calls(monkeypatch, tmp_path)
     lines = [json.loads(l) for l in (tmp_path / "checker.log").read_text().splitlines()]
     probe = [l for l in lines if l["model"] == "m1 [probe:vision]"]
     assert len(probe) == 1 and "no images please" in probe[0]["response"] and "no images please" in probe[0]["error"]
+
+
+def test_probe_log_omits_image_bytes(monkeypatch, tmp_path):
+    def handler(req):
+        if b"image_url" in req.content:
+            return httpx.Response(200, json={"choices": [{"message": {"content": "Yes"}}]})
+        return httpx.Response(200, content=SSE)
+    (r,) = check(monkeypatch, tmp_path, handler, capabilities=["vision"])
+    assert r["capabilities"] == {"vision": True}
+    log = (tmp_path / "checker.log").read_text()
+    assert "base64," not in log and "image omitted" in log

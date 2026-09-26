@@ -1,5 +1,7 @@
 import asyncio
+import base64
 import json
+import re
 import time
 
 import httpx
@@ -238,7 +240,7 @@ async def check_models(request: Request):
 
                 def log_probe(kind, probe_payload, text, reason):
                     try:
-                        log_call(f"{model_id} [probe:{kind}]", probe_payload, text, error=reason)
+                        log_call(f"{model_id} [probe:{kind}]", _redact_images(probe_payload), text, error=reason)
                     except Exception:
                         pass
                 if probes:
@@ -505,8 +507,27 @@ async def stream_completion(client, url, headers, payload):
                 "error": str(e)[:200], "retry_stream": False}
 
 
-TINY_PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
-            "AAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+VISION_IMAGE_PATH = Path(__file__).parent / "test_image.png"  # cartoon avatar of a person
+VISION_QUESTION = "Does this image show a person? Answer with exactly one word: yes or no."
+
+
+def _vision_image():
+    """The test image as a data URI, or None when the file is missing."""
+    try:
+        return "data:image/png;base64," + base64.b64encode(VISION_IMAGE_PATH.read_bytes()).decode()
+    except OSError:
+        return None
+
+
+def _redact_images(obj):
+    """Copy of a payload with inline image data replaced, so checker.log stays small."""
+    if isinstance(obj, dict):
+        return {k: (f"[image omitted, {len(v)} chars]"
+                    if k == "url" and isinstance(v, str) and v.startswith("data:image")
+                    else _redact_images(v)) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_redact_images(x) for x in obj]
+    return obj
 
 
 def _judge_capability(kind, status, data, content):
@@ -526,10 +547,11 @@ def _judge_capability(kind, status, data, content):
             return True
         except Exception:
             return False
-    return True  # vision: cukup HTTP 200
+    text = content or _text_of(data) or ""  # vision: the model must answer "yes"
+    return re.search(r"\byes\b", text, re.I) is not None
 
 
-def _probe_reason(kind, status, text, data):
+def _probe_reason(kind, status, text, data, content=None):
     if status >= 400:
         return f"HTTP {status}: {text[:200]}"
     if not data:
@@ -538,6 +560,9 @@ def _probe_reason(kind, status, text, data):
         return "reply contained no tool call"
     if kind == "json":
         return "reply is not valid JSON"
+    if kind == "vision":
+        reply = (content or _text_of(data) or "").strip()
+        return f"model did not confirm seeing a person in the test image (reply: {reply[:120] or 'empty'})"
     return "unexpected response"
 
 
@@ -559,25 +584,31 @@ async def run_probes(client, url, headers, model_id, kinds, details=None, log=No
                  "messages": [{"role": "user",
                                "content": 'Return exactly {"ok": true} as JSON.'}],
                  "response_format": {"type": "json_object"}},
-        "vision": {**base, "max_tokens": 20,
-                   "messages": [{"role": "user", "content": [
-                       {"type": "text", "text": "Describe this image in one word."},
-                       {"type": "image_url", "image_url": {"url": TINY_PNG}}]}]},
     }
     out = {}
     for kind in kinds:
         payload = jobs.get(kind)
+        image = None
+        if kind == "vision":
+            image = _vision_image()
+            payload = {**base, "max_tokens": 300,  # headroom for reasoning models
+                       "messages": [{"role": "user", "content": [
+                           {"type": "text", "text": VISION_QUESTION},
+                           {"type": "image_url", "image_url": {"url": image}}]}]}
         if not payload:
             continue
         status, text, reason, ok = None, "", None, False
         try:
-            resp = await client.post(url, headers={**headers, "Content-Type": "application/json"},
-                                     json=payload)
-            status, text = resp.status_code, resp.text[:2000]
-            data, content = parse_completion_response(resp.text)
-            ok = _judge_capability(kind, status, data, content)
-            if not ok:
-                reason = _probe_reason(kind, status, text, data)
+            if kind == "vision" and image is None:
+                reason = f"{VISION_IMAGE_PATH.name} not found next to app.py"
+            else:
+                resp = await client.post(url, headers={**headers, "Content-Type": "application/json"},
+                                         json=payload)
+                status, text = resp.status_code, resp.text[:2000]
+                data, content = parse_completion_response(resp.text)
+                ok = _judge_capability(kind, status, data, content)
+                if not ok:
+                    reason = _probe_reason(kind, status, text, data, content)
         except Exception as e:
             reason = f"{type(e).__name__}: {e}"[:300]
         out[kind] = ok

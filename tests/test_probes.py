@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import json
+from pathlib import Path
 
 import httpx
 
@@ -17,13 +20,18 @@ def test_judge_json_and_errors():
     assert appmod._judge_capability("json", 200, {"x": 1}, '{"ok": true}') is True
     assert appmod._judge_capability("json", 200, {"x": 1}, "not json") is False
     assert appmod._judge_capability("vision", 400, {"x": 1}, "x") is False
-    assert appmod._judge_capability("vision", 200, {"x": 1}, "dot") is True
+    assert appmod._judge_capability("vision", 200, {"x": 1}, "Yes.") is True
+    assert appmod._judge_capability("vision", 200, {"x": 1}, "No.") is False
+    assert appmod._judge_capability("vision", 200, {"x": 1}, "Không nhận được ảnh") is False
+    plain = {"choices": [{"message": {"content": "yes"}}]}
+    assert appmod._judge_capability("vision", 200, plain, None) is True  # plain-JSON body, no SSE text
 
 
 def test_run_probes_end_to_end():
     def handler(request):
+        text = "Yes" if b"image_url" in request.content else '{"ok": true}'
         return httpx.Response(200, json={"choices": [{"message": {
-            "content": '{"ok": true}', "tool_calls": [{"id": "1"}]}}]})
+            "content": text, "tool_calls": [{"id": "1"}]}}]})
 
     async def run():
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
@@ -64,11 +72,38 @@ def test_probe_reasons_per_kind_and_exception():
 
 
 def test_passing_probe_has_no_reason():
-    out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": "dot"}}]}), ["vision"])
+    out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": "Yes"}}]}), ["vision"])
     assert out == {"vision": True} and d["vision"]["reason"] is None
 
 
 def test_probe_tolerates_json_with_glued_done_marker():
-    from tests.test_parse import GLUED
-    out, d = probe_details(lambda req: httpx.Response(200, content=GLUED), ["vision"])
+    glued = '{"choices":[{"message":{"content":"Yes"}}]}data: [DONE]\n'
+    out, d = probe_details(lambda req: httpx.Response(200, content=glued), ["vision"])
     assert out == {"vision": True} and d["vision"]["reason"] is None
+
+
+def test_vision_probe_sends_the_real_test_image_and_question():
+    seen = []
+
+    def handler(req):
+        seen.append(json.loads(req.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "Yes"}}]})
+    out, _ = probe_details(handler, ["vision"])
+    parts = seen[0]["messages"][0]["content"]
+    png = (Path(appmod.__file__).parent / "test_image.png").read_bytes()
+    assert parts[1]["image_url"]["url"] == "data:image/png;base64," + base64.b64encode(png).decode()
+    assert "person" in parts[0]["text"] and seen[0]["max_tokens"] >= 200
+    assert out == {"vision": True}
+
+
+def test_vision_probe_fails_when_model_did_not_see_the_image():
+    reply = "Không nhận được ảnh"
+    out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": reply}}]}), ["vision"])
+    assert out == {"vision": False}
+    assert "did not confirm" in d["vision"]["reason"] and reply in d["vision"]["reason"]
+
+
+def test_vision_probe_reports_missing_image_file(monkeypatch, tmp_path):
+    monkeypatch.setattr(appmod, "VISION_IMAGE_PATH", tmp_path / "nope.png")
+    out, d = probe_details(lambda req: (_ for _ in ()).throw(AssertionError("must not call upstream")), ["vision"])
+    assert out == {"vision": False} and "not found" in d["vision"]["reason"]
