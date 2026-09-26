@@ -14,6 +14,12 @@ Alat berbasis web yang ringan dan berjalan secara lokal, dirancang untuk memerik
   - Otomatis membaca dan mem-parsing `~/.config/opencode/opencode.json`.
   - Menampilkan daftar konfigurasi provider yang sudah ada.
   - Mendukung penambahan, penghapusan, dan sinkronisasi model yang sudah diuji ke provider tertentu (misalnya `9router`).
+- **Metrik Streaming**: TTFT (time to first token) dan tok/s asli, diukur pada fase generasi yang di-stream.
+- **Deteksi Flakiness**: 1–5 run per model; latency adalah median, kegagalan parsial ditandai *flaky*.
+- **Uji Kemampuan** (opsional): tool calling, JSON mode, vision; model reasoning terdeteksi dari blok thinking.
+- **Riwayat**: setiap pengecekan disimpan di SQLite (`checker_history.db`) dan bisa dilihat di tab History.
+- **Sortir, Ekspor, Biaya**: kolom bisa diurutkan, ekspor CSV/JSON, estimasi biaya opsional (harga disimpan di browser; klik sel Cost untuk mengubah).
+- **Retest & Badge**: uji ulang hanya model inactive; badge untuk model yang sudah ada di konfigurasi OpenCode.
 - **UI Web Interaktif**: Tampilan modern bertema gelap untuk menjalankan pengecekan, melihat payload respons, dan mengelola konfigurasi.
 
 ### Stack
@@ -63,10 +69,18 @@ Memicu pengecekan model untuk sebuah endpoint.
     "endpoint": "https://api.example.com",
     "api_key": "sk-...",
     "prompt": "hi",
-    "max_tokens": 10
+    "max_tokens": 10,
+    "system": "",
+    "models": ["model-a"],
+    "runs": 1,
+    "capabilities": ["tools", "json", "vision"]
   }
   ```
+- `system`, `models`, `runs` (1–5) dan `capabilities` bersifat opsional; tanpa `models`, semua model dari `/v1/models` diuji.
 - **Response**: Stream Server-Sent Events (SSE) berisi progres dan hasil pengujian.
+
+##### `GET /api/history`, `GET /api/history/{id}`, `DELETE /api/history/{id}`
+Daftar, detail, dan hapus riwayat pengecekan yang tersimpan (`limit` opsional, default 20).
 
 #### Endpoint Konfigurasi
 
@@ -110,6 +124,12 @@ A lightweight, local web-based tool designed to check compatibility and status o
   - Automatically reads and parses `~/.config/opencode/opencode.json`.
   - Lists existing provider configurations.
   - Allows adding, deleting, and syncing tested models back to specific providers (e.g., `9router`).
+- **Streaming Metrics**: TTFT (time to first token) and true tok/s, measured over the streamed generation phase.
+- **Flakiness Detection**: 1–5 runs per model; latency is the median and partial failures are flagged as flaky.
+- **Capability Probes** (opt-in): tool calling, JSON mode, vision; reasoning models are detected from thinking blocks.
+- **History**: every check is stored in SQLite (`checker_history.db`) and browsable in the History tab.
+- **Sort, Export, Cost**: sortable columns, CSV/JSON export, optional cost estimation (prices are stored in the browser; click a Cost cell to edit).
+- **Retest & Badge**: retest only inactive models; badge for models already in the OpenCode config.
 - **Interactive Web UI**: Modern, dark-themed GUI for launching checks, viewing response payloads, and managing configurations.
 
 ### Stack
@@ -159,10 +179,18 @@ Triggers checking of models for an endpoint.
     "endpoint": "https://api.example.com",
     "api_key": "sk-...",
     "prompt": "hi",
-    "max_tokens": 10
+    "max_tokens": 10,
+    "system": "",
+    "models": ["model-a"],
+    "runs": 1,
+    "capabilities": ["tools", "json", "vision"]
   }
   ```
+- `system`, `models`, `runs` (1–5) and `capabilities` are optional; without `models`, every model from `/v1/models` is tested.
 - **Response**: Server-Sent Events (SSE) stream of progress and test results.
+
+##### `GET /api/history`, `GET /api/history/{id}`, `DELETE /api/history/{id}`
+List, inspect, and delete saved check runs (`limit` is optional, default 20).
 
 #### Config Endpoints
 
@@ -191,3 +219,10 @@ Batch syncs active and/or inactive models into OpenCode config.
     "mode": "merge" | "replace"
   }
   ```
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+PYTHONPATH=. python3.14 -m pytest tests/ -q
+```
