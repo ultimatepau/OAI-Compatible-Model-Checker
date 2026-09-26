@@ -148,7 +148,7 @@
     <summary>How the check works</summary>
     <ol>
       <li>Fetches <code>GET /v1/models</code> from the endpoint to list available models.</li>
-      <li>Sends your prompt to every model via <code>POST /v1/chat/completions</code> — 5 requests in parallel, 15s timeout each.</li>
+      <li>Sends your prompt to every model via <code>POST /v1/chat/completions</code> — 5 requests in parallel, 10s connect timeout and 60s max silence while reading.</li>
       <li><b>Active</b> = any HTTP 200 response. <b>Inactive</b> = connection error, timeout, or non-200.</li>
       <li>Requests are streamed: <b>TTFT</b> is time to the first visible token, latency is the full response, and tok/s is measured over the generation phase.</li>
     </ol>
@@ -533,6 +533,7 @@ async function startCheck(keep) {
   }
 
   checkBtn.disabled = false;
+  if (checkResults.length) renderAll();   // re-render now the button is enabled, so Retest shows
 }
 
 let configModelIds = new Set();   // models already present in the opencode config (any provider)
@@ -575,7 +576,7 @@ function renderAll() {
 
   summary.innerHTML =
     `<span class="ok">${active.length} active</span> · <span class="bad">${inactive} inactive</span> · ${checkResults.length} total` +
-    (fastest ? ` · fastest: <code>${esc(fastest.model)}</code> at ${fastest.latency_ms} ms` : "");
+    (fastest ? ` · fastest: <code>${esc(fastest.model)}</code> at ${esc(fastest.latency_ms)} ms` : "");
   if (inactive && !checkBtn.disabled) {
     summary.innerHTML += ` · <button type="button" class="chip" onclick="retestInactive()">Retest inactive (${inactive})</button>`;
   }
@@ -620,9 +621,9 @@ function renderTable() {
   tbody.innerHTML = visibleResults().map(r => {
     const id = r._id;
     const hasTok = r.prompt_tokens != null || r.completion_tokens != null;
-    const tokens = hasTok ? `<span class="tokens">${r.prompt_tokens ?? "?"} in · ${r.completion_tokens ?? "?"} out tokens</span>` : "";
-    const runs = r.runs_total > 1 ? `<span class="tokens">${r.runs_ok}/${r.runs_total} ok${r.flaky ? " · flaky" : ""}</span>` : "";
-    const ttft = r.ttft_ms != null ? `${r.ttft_ms} ms` : "—";
+    const tokens = hasTok ? `<span class="tokens">${esc(r.prompt_tokens ?? "?")} in · ${esc(r.completion_tokens ?? "?")} out tokens</span>` : "";
+    const runs = r.runs_total > 1 ? `<span class="tokens">${esc(r.runs_ok)}/${esc(r.runs_total)} ok${r.flaky ? " · flaky" : ""}</span>` : "";
+    const ttft = r.ttft_ms != null ? `${esc(r.ttft_ms)} ms` : "—";
     const caps = r.capabilities || {};
     const capKeys = ["stream", "tools", "json", "vision", "reasoning"];
     const capsHtml = capKeys.map(k => {
@@ -634,9 +635,9 @@ function renderTable() {
     <tr class="result">
       <td class="model">${esc(r.model)}${configModelIds.has(r.model) ? ' <span class="badge ok" title="Already in opencode config">cfg</span>' : ""}</td>
       <td><span class="badge ${r.status === "active" ? "ok" : "bad"}">${r.status === "active" ? "Active" : "Inactive"}</span></td>
-      <td>${r.latency_ms} ms${tokens}${runs}</td>
+      <td>${esc(r.latency_ms)} ms${tokens}${runs}</td>
       <td>${ttft}</td>
-      <td>${r.tokens_per_sec != null ? r.tokens_per_sec : "—"}</td>
+      <td>${r.tokens_per_sec != null ? esc(r.tokens_per_sec) : "—"}</td>
       <td>${capsHtml}</td>
       <td>${r._cost !== Infinity
         ? `<a href="#" data-price="${id}" title="Click to edit price">$${r._cost.toFixed(6)}</a>`
@@ -749,8 +750,8 @@ async function loadHistory() {
           <td>${esc(r.ts)}</td>
           <td class="model">${esc(r.endpoint)}</td>
           <td>${esc((r.prompt || "").slice(0, 40))}</td>
-          <td>${r.total}</td>
-          <td><span class="badge ok">${r.active}</span></td>
+          <td>${esc(r.total)}</td>
+          <td><span class="badge ok">${esc(r.active)}</span></td>
           <td>
             <button type="button" class="det-btn" onclick="viewHistoryRun(${r.id})">View</button>
             <button type="button" class="det-btn" onclick="deleteHistoryRun(${r.id})">Delete</button>
@@ -766,10 +767,10 @@ async function viewHistoryRun(id) {
     const resp = await fetch(`/api/history/${id}`);
     const data = await resp.json();
     if (!data.ok) return;
-    checkResults = data.results.map((r, i) => {
+    checkResults = data.results.map(r => {
       let capabilities = {};   // stored as a JSON string in SQLite
       try { capabilities = (typeof r.capabilities === "string" ? JSON.parse(r.capabilities) : r.capabilities) || {}; } catch {}
-      return { ...r, capabilities, _id: i };
+      return { ...r, capabilities, _id: nextId++ };
     });
     filter = "all";
     switchTab("checker");
