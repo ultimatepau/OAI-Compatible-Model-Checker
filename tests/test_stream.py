@@ -71,3 +71,9 @@ def test_compute_tps_guards_against_zero_generation_window():
     assert appmod.compute_tps(10, 800, 799, True) == 12.5     # burst-buffered stream: below floor
     assert appmod.compute_tps(10, 1000, 200, True) == 12.5    # real generation window 800 ms
     assert appmod.compute_tps(None, 800, 200, True) is None
+
+
+def test_stream_completion_tolerates_glued_done_marker():
+    from tests.test_parse import GLUED
+    r = run_with(lambda request: httpx.Response(200, content=GLUED))
+    assert r["ok"] is True and r["content"] == "hi" and r["usage"]["completion_tokens"] == 2

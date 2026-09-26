@@ -12,3 +12,12 @@ def test_parse_plain_json():
 
 def test_parse_garbage():
     assert parse_completion_response("<html>err</html>") == (None, None)
+
+
+GLUED = '{"choices":[{"message":{"content":"hi"}}],"usage":{"completion_tokens":2}}data: [DONE]\n'
+
+
+def test_plain_json_with_glued_done_marker_is_parsed():
+    data, content = parse_completion_response(GLUED)
+    assert data["usage"]["completion_tokens"] == 2 and content is None
+    assert parse_completion_response("garbage{")[0] is None

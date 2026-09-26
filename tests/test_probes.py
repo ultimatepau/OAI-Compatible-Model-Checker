@@ -66,3 +66,9 @@ def test_probe_reasons_per_kind_and_exception():
 def test_passing_probe_has_no_reason():
     out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": "dot"}}]}), ["vision"])
     assert out == {"vision": True} and d["vision"]["reason"] is None
+
+
+def test_probe_tolerates_json_with_glued_done_marker():
+    from tests.test_parse import GLUED
+    out, d = probe_details(lambda req: httpx.Response(200, content=GLUED), ["vision"])
+    assert out == {"vision": True} and d["vision"]["reason"] is None

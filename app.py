@@ -42,6 +42,13 @@ def parse_completion_response(raw: str):
         return json.loads(raw), None
     except Exception:
         pass
+    # Some proxies send plain JSON and glue "data: [DONE]" on the same line.
+    lead = raw.lstrip()
+    if lead.startswith("{"):
+        try:
+            return json.JSONDecoder().raw_decode(lead)[0], None
+        except Exception:
+            pass
     data = None
     parts = []
     usage = None
