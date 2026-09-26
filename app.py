@@ -397,3 +397,65 @@ async def stream_completion(client, url, headers, payload):
                 "ttft_ms": None, "content": None, "usage": {},
                 "streamed": False, "reasoning": False,
                 "error": str(e)[:200], "retry_stream": False}
+
+
+TINY_PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+            "AAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+
+
+def _judge_capability(kind, status, data, content):
+    if status >= 400 or not data:
+        return False
+    if kind == "tools":
+        msg = (data.get("choices") or [{}])[0].get("message", {})
+        if msg.get("tool_calls"):
+            return True
+        blocks = data.get("content") or []
+        return any(isinstance(b, dict) and b.get("type") == "tool_use" for b in blocks)
+    if kind == "json":
+        if content is None:  # plain (non-SSE) body: parse_completion_response gives no text
+            msg = (data.get("choices") or [{}])[0].get("message", {})
+            content = msg.get("content") or "".join(
+                b.get("text", "") for b in data.get("content") or [] if isinstance(b, dict))
+        try:
+            json.loads(content or "")
+            return True
+        except Exception:
+            return False
+    return True  # vision: cukup HTTP 200
+
+
+async def run_probes(client, url, headers, model_id, kinds):
+    base = {"model": model_id, "max_tokens": 100}
+    jobs = {
+        "tools": {**base,
+                  "messages": [{"role": "user",
+                                "content": "What is the weather in Jakarta? Use the get_weather tool."}],
+                  "tools": [{"type": "function",
+                             "function": {"name": "get_weather",
+                                          "description": "Get current weather for a city",
+                                          "parameters": {"type": "object",
+                                                         "properties": {"city": {"type": "string"}},
+                                                         "required": ["city"]}}}]},
+        "json": {**base,
+                 "messages": [{"role": "user",
+                               "content": 'Return exactly {"ok": true} as JSON.'}],
+                 "response_format": {"type": "json_object"}},
+        "vision": {**base, "max_tokens": 20,
+                   "messages": [{"role": "user", "content": [
+                       {"type": "text", "text": "Describe this image in one word."},
+                       {"type": "image_url", "image_url": {"url": TINY_PNG}}]}]},
+    }
+    out = {}
+    for kind in kinds:
+        payload = jobs.get(kind)
+        if not payload:
+            continue
+        try:
+            resp = await client.post(url, headers={**headers, "Content-Type": "application/json"},
+                                     json=payload)
+            data, content = parse_completion_response(resp.text)
+            out[kind] = _judge_capability(kind, resp.status_code, data, content)
+        except Exception:
+            out[kind] = False
+    return out
