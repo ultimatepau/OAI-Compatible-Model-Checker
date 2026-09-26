@@ -307,3 +307,93 @@ async def sync_models_to_config(request: Request):
         return {"ok": True, "added": added, "removed": removed, "total": len(models)}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+# ── Streaming helper ─────────────────────────────────────────────────────
+
+async def stream_completion(client, url, headers, payload):
+    """POST streaming chat completion, ukur TTFT. Fallback non-stream bila endpoint tolak stream.
+
+    Return dict: ok, status, ttft_ms, latency_ms, content, usage, streamed,
+    reasoning, error, retry_stream.
+    """
+    start = time.monotonic()
+    ttft = None
+    parts = []
+    usage = {}
+    reasoning = False
+    data = None
+    raw = ""
+    got_sse = False
+    stream_req = bool(payload.get("stream"))
+    try:
+        async with client.stream(
+            "POST", url,
+            headers={**headers, "Content-Type": "application/json"},
+            json=payload,
+        ) as resp:
+            if resp.status_code >= 400:
+                body = (await resp.aread()).decode("utf-8", "replace")[:200000]
+                retry = stream_req and (resp.status_code == 400 or "stream" in body.lower())
+                return {"ok": False, "status": resp.status_code,
+                        "latency_ms": int((time.monotonic() - start) * 1000),
+                        "ttft_ms": None, "content": None, "usage": {},
+                        "streamed": False, "reasoning": False,
+                        "error": body[:200], "retry_stream": retry}
+            buf = ""
+            async for chunk in resp.aiter_text():
+                raw = (raw + chunk)[:200000]
+                buf += chunk
+                while "\n" in buf:
+                    line, buf = buf.split("\n", 1)
+                    line = line.strip()
+                    if not line.startswith("data:"):
+                        continue
+                    got_sse = True
+                    s = line[5:].strip()
+                    if not s or s == "[DONE]":
+                        continue
+                    try:
+                        cj = json.loads(s)
+                    except Exception:
+                        continue
+                    data = cj
+                    if cj.get("usage"):
+                        usage = {**usage, **cj["usage"]}
+                    ch = cj.get("choices") or []
+                    if ch:
+                        d = ch[0].get("delta") or {}
+                        if d.get("reasoning_content"):
+                            reasoning = True
+                        if d.get("content"):
+                            if ttft is None:
+                                ttft = (time.monotonic() - start) * 1000
+                            parts.append(d["content"])
+                    else:
+                        d = cj.get("delta") or {}
+                        if cj.get("type") == "content_block_delta":
+                            if d.get("type") == "thinking_delta":
+                                reasoning = True
+                            if d.get("text"):
+                                if ttft is None:
+                                    ttft = (time.monotonic() - start) * 1000
+                                parts.append(d["text"])
+                        elif cj.get("type") == "message_delta" and cj.get("usage"):
+                            usage = {**usage, **cj["usage"]}
+        latency = int((time.monotonic() - start) * 1000)
+        content = "".join(parts) or None
+        if not got_sse:
+            # Endpoint abaikan stream param dan balas JSON polos.
+            data, content = parse_completion_response(raw)
+            ttft = latency
+            if data and data.get("usage"):
+                usage = {**usage, **data["usage"]}
+        return {"ok": True, "status": 200, "latency_ms": latency, "ttft_ms": ttft,
+                "content": content, "usage": usage, "streamed": got_sse,
+                "reasoning": reasoning, "error": None, "retry_stream": False}
+    except Exception as e:
+        return {"ok": False, "status": None,
+                "latency_ms": int((time.monotonic() - start) * 1000),
+                "ttft_ms": None, "content": None, "usage": {},
+                "streamed": False, "reasoning": False,
+                "error": str(e)[:200], "retry_stream": False}
