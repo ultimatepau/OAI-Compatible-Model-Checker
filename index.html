@@ -222,6 +222,10 @@
   <div id="results-head" hidden style="margin-top:1.25rem">
     <div class="summary" id="summary"></div>
     <div class="filters" id="filters"></div>
+    <div class="filters" style="margin-top:0.4rem">
+      <button type="button" class="chip" onclick="exportResults('csv')">Export CSV</button>
+      <button type="button" class="chip" onclick="exportResults('json')">Export JSON</button>
+    </div>
   </div>
 
   <div class="table-wrap" id="table-wrap" hidden>
@@ -620,6 +624,32 @@ document.querySelector("#table-wrap thead").addEventListener("click", e => {
   else { sortKey = key; sortDir = 1; }
   renderAll();
 });
+
+function exportResults(kind) {
+  if (!checkResults.length) return;
+  let blob, name;
+  if (kind === "json") {
+    blob = new Blob([JSON.stringify(checkResults, null, 2)], { type: "application/json" });
+    name = `check-results-${Date.now()}.json`;
+  } else {
+    const cols = ["model", "status", "latency_ms", "ttft_ms", "tokens_per_sec",
+                  "prompt_tokens", "completion_tokens", "runs_ok", "runs_total", "error"];
+    const rows = [cols.join(",")].concat(checkResults.map(r =>
+      cols.map(c => {
+        let v = r[c] ?? "";
+        if (c === "capabilities" || typeof v === "object") v = JSON.stringify(v);
+        v = String(v).replaceAll('"', '""');
+        return /[",\n]/.test(v) ? `"${v}"` : v;
+      }).join(",")
+    ));
+    blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    name = `check-results-${Date.now()}.csv`;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
 
 function formatJson(val) {
   if (!val) return "—";
