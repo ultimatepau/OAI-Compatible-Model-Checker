@@ -20,16 +20,20 @@ def test_judge_json_and_errors():
     assert appmod._judge_capability("json", 200, {"x": 1}, '{"ok": true}') is True
     assert appmod._judge_capability("json", 200, {"x": 1}, "not json") is False
     assert appmod._judge_capability("vision", 400, {"x": 1}, "x") is False
-    assert appmod._judge_capability("vision", 200, {"x": 1}, "Yes.") is True
-    assert appmod._judge_capability("vision", 200, {"x": 1}, "No.") is False
-    assert appmod._judge_capability("vision", 200, {"x": 1}, "Không nhận được ảnh") is False
-    plain = {"choices": [{"message": {"content": "yes"}}]}
-    assert appmod._judge_capability("vision", 200, plain, None) is True  # plain-JSON body, no SSE text
+    j = lambda text, data={"x": 1}: appmod._judge_capability("vision", 200, data, text)
+    assert j("A cartoon avatar of a young man with spiky black hair.") is True
+    assert j("This is an illustration of a person wearing a hoodie.") is True
+    assert j("Yes.") is False                                   # no description of the image
+    assert j("Không nhận được ảnh") is False
+    assert j("No image received. I cannot describe it.") is False
+    assert j("I can't see any person in this image.") is False  # mentions 'person' but refuses
+    plain = {"choices": [{"message": {"content": "A man's face."}}]}
+    assert j(None, plain) is True                               # plain-JSON body, no SSE text
 
 
 def test_run_probes_end_to_end():
     def handler(request):
-        text = "Yes" if b"image_url" in request.content else '{"ok": true}'
+        text = "A cartoon avatar of a young man with spiky black hair." if b"image_url" in request.content else '{"ok": true}'
         return httpx.Response(200, json={"choices": [{"message": {
             "content": text, "tool_calls": [{"id": "1"}]}}]})
 
@@ -72,12 +76,12 @@ def test_probe_reasons_per_kind_and_exception():
 
 
 def test_passing_probe_has_no_reason():
-    out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": "Yes"}}]}), ["vision"])
+    out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": "A cartoon avatar of a young man with spiky black hair."}}]}), ["vision"])
     assert out == {"vision": True} and d["vision"]["reason"] is None
 
 
 def test_probe_tolerates_json_with_glued_done_marker():
-    glued = '{"choices":[{"message":{"content":"Yes"}}]}data: [DONE]\n'
+    glued = '{"choices":[{"message":{"content":"A cartoon avatar of a young man with spiky black hair."}}]}data: [DONE]\n'
     out, d = probe_details(lambda req: httpx.Response(200, content=glued), ["vision"])
     assert out == {"vision": True} and d["vision"]["reason"] is None
 
@@ -87,12 +91,13 @@ def test_vision_probe_sends_the_real_test_image_and_question():
 
     def handler(req):
         seen.append(json.loads(req.content))
-        return httpx.Response(200, json={"choices": [{"message": {"content": "Yes"}}]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "A cartoon avatar of a young man with spiky black hair."}}]})
     out, _ = probe_details(handler, ["vision"])
     parts = seen[0]["messages"][0]["content"]
     png = (Path(appmod.__file__).parent / "test_image.png").read_bytes()
     assert parts[1]["image_url"]["url"] == "data:image/png;base64," + base64.b64encode(png).decode()
-    assert "person" in parts[0]["text"] and seen[0]["max_tokens"] >= 200
+    q = parts[0]["text"].lower()
+    assert "about" in q and "yes or no" not in q and seen[0]["max_tokens"] >= 200
     assert out == {"vision": True}
 
 
@@ -100,7 +105,7 @@ def test_vision_probe_fails_when_model_did_not_see_the_image():
     reply = "Không nhận được ảnh"
     out, d = probe_details(lambda req: httpx.Response(200, json={"choices": [{"message": {"content": reply}}]}), ["vision"])
     assert out == {"vision": False}
-    assert "did not confirm" in d["vision"]["reason"] and reply in d["vision"]["reason"]
+    assert "does not describe" in d["vision"]["reason"] and reply in d["vision"]["reason"]
 
 
 def test_vision_probe_reports_missing_image_file(monkeypatch, tmp_path):

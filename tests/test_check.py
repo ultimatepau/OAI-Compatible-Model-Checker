@@ -103,7 +103,7 @@ def test_check_returns_probe_details_and_logs_probe_calls(monkeypatch, tmp_path)
 def test_probe_log_omits_image_bytes(monkeypatch, tmp_path):
     def handler(req):
         if b"image_url" in req.content:
-            return httpx.Response(200, json={"choices": [{"message": {"content": "Yes"}}]})
+            return httpx.Response(200, json={"choices": [{"message": {"content": "A cartoon avatar of a young man with spiky black hair."}}]})
         return httpx.Response(200, content=SSE)
     (r,) = check(monkeypatch, tmp_path, handler, capabilities=["vision"])
     assert r["capabilities"] == {"vision": True}

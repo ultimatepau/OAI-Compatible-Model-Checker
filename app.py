@@ -508,7 +508,13 @@ async def stream_completion(client, url, headers, payload):
 
 
 VISION_IMAGE_PATH = Path(__file__).parent / "test_image.png"  # cartoon avatar of a person
-VISION_QUESTION = "Does this image show a person? Answer with exactly one word: yes or no."
+VISION_QUESTION = "What is this image about? Describe it briefly."
+# The test image is a cartoon avatar of a person: a sighted model names what it shows,
+# a blind one (or a proxy dropping the image) says it cannot see anything.
+_VISION_SEEN = re.compile(
+    r"\b(person|people|man|male|boy|guy|human|face|avatar|portrait|character|someone|hair)\b", re.I)
+_VISION_BLIND = re.compile(
+    r"(can(?:'|’)?t|cannot|unable|no image|not (?:receive|see)|don(?:'|’)?t see|nhận được)", re.I)
 
 
 def _vision_image():
@@ -547,8 +553,8 @@ def _judge_capability(kind, status, data, content):
             return True
         except Exception:
             return False
-    text = content or _text_of(data) or ""  # vision: the model must answer "yes"
-    return re.search(r"\byes\b", text, re.I) is not None
+    text = content or _text_of(data) or ""  # vision: the reply must describe the image
+    return bool(_VISION_SEEN.search(text)) and not _VISION_BLIND.search(text)
 
 
 def _probe_reason(kind, status, text, data, content=None):
@@ -562,7 +568,7 @@ def _probe_reason(kind, status, text, data, content=None):
         return "reply is not valid JSON"
     if kind == "vision":
         reply = (content or _text_of(data) or "").strip()
-        return f"model did not confirm seeing a person in the test image (reply: {reply[:120] or 'empty'})"
+        return f"reply does not describe the test image, a person (reply: {reply[:120] or 'empty'})"
     return "unexpected response"
 
 
