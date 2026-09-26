@@ -96,6 +96,8 @@
   .capdot.neutral { color: var(--muted); }
   input[type=checkbox] { width: auto; }
   .opt { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 400; margin: 0; }
+  th[data-sort] { cursor: pointer; user-select: none; }
+  th[data-sort]:hover { color: var(--text); }
   td.error-text { color: var(--bad); font-size: 0.78rem; max-width: 320px; word-break: break-word; }
   .det-btn { font-size: 0.78rem; padding: 0.2rem 0.6rem; }
   tr.detail-row td { background: var(--surface); padding: 0.75rem 0.85rem; }
@@ -225,7 +227,16 @@
   <div class="table-wrap" id="table-wrap" hidden>
     <table>
       <thead>
-        <tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">TTFT</th><th scope="col">Tok/s</th><th scope="col">Caps</th><th scope="col">Error</th><th scope="col"><span class="sr-only"></span>Details</th></tr>
+        <tr>
+          <th scope="col" data-sort="model">Model</th>
+          <th scope="col">Status</th>
+          <th scope="col" data-sort="latency_ms">Latency</th>
+          <th scope="col" data-sort="ttft_ms">TTFT</th>
+          <th scope="col" data-sort="tokens_per_sec">Tok/s</th>
+          <th scope="col">Caps</th>
+          <th scope="col" data-sort="error">Error</th>
+          <th scope="col"><span class="sr-only"></span>Details</th>
+        </tr>
       </thead>
       <tbody id="results"></tbody>
     </table>
@@ -283,6 +294,8 @@ let configEndpoints = [];   // [{name, baseURL}]
 let currentProvider = "9router";
 let filter = "all";
 let totalCount = 0, doneCount = 0;
+let sortKey = "latency_ms";
+let sortDir = 1;
 
 const tbody = document.getElementById("results");
 const progress = document.getElementById("progress");
@@ -536,9 +549,13 @@ function setFilter(f) { filter = f; renderAll(); }
 
 function visibleResults() {
   const list = filter === "all" ? [...checkResults] : checkResults.filter(r => r.status === filter);
+  const missing = v => v == null || v === Infinity;
   return list.sort((a, b) => {
     if (a.status !== b.status) return a.status === "active" ? -1 : 1;
-    return a.latency_ms - b.latency_ms;
+    const av = a[sortKey], bv = b[sortKey];
+    if (missing(av) || missing(bv)) return missing(av) - missing(bv); // blanks always last
+    if (typeof av === "string" || typeof bv === "string") return String(av).localeCompare(String(bv)) * sortDir;
+    return (av - bv) * sortDir;
   });
 }
 
@@ -593,6 +610,15 @@ tbody.addEventListener("click", e => {
   const row = document.getElementById(`detail-${btn.dataset.detail}`);
   row.hidden = !row.hidden;
   btn.textContent = row.hidden ? "Details" : "Hide";
+});
+
+document.querySelector("#table-wrap thead").addEventListener("click", e => {
+  const th = e.target.closest("th[data-sort]");
+  if (!th) return;
+  const key = th.dataset.sort;
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = 1; }
+  renderAll();
 });
 
 function formatJson(val) {
