@@ -427,13 +427,14 @@ function selectAllModels(all) {
   document.getElementById("checkBtn").disabled = selectedModels.size === 0;
 }
 
-async function startCheck() {
+async function startCheck(keep) {
   const endpoint = document.getElementById("endpoint").value.trim();
   const api_key = document.getElementById("api_key").value.trim();
   const prompt = document.getElementById("prompt").value.trim() || "hi";
   const max_tokens = parseInt(document.getElementById("max_tokens").value) || 10;
   const system = document.getElementById("system_prompt").value.trim();
   const models = Array.from(selectedModels);
+  await cacheConfigModels();
   const runs = Math.min(5, Math.max(1, parseInt(document.getElementById("runs").value) || 1));
   const capabilities = Array.from(document.querySelectorAll(".probe:checked")).map(c => c.value);
 
@@ -455,7 +456,7 @@ async function startCheck() {
   summary.innerHTML = "";
   filter = "all";
   totalCount = 0; doneCount = 0;
-  checkResults = [];
+  checkResults = keep || [];   // retest passes the results to keep
   document.getElementById("table-wrap").hidden = true;
   document.getElementById("results-head").hidden = true;
   document.getElementById("empty").hidden = true;
@@ -464,6 +465,7 @@ async function startCheck() {
   barFill.style.width = "0%";
   progressText.textContent = `Testing ${models.length} selected model${models.length === 1 ? "" : "s"}…`;
   checkBtn.disabled = true;
+  if (checkResults.length) renderAll();
 
   try {
     const resp = await fetch("/api/check", {
@@ -523,6 +525,33 @@ async function startCheck() {
   checkBtn.disabled = false;
 }
 
+let configModelIds = new Set();   // models already present in the opencode config (any provider)
+
+async function cacheConfigModels() {
+  try {
+    const resp = await fetch("/api/config");
+    const data = await resp.json();
+    if (!data.ok) return;
+    const all = [];
+    for (const p of Object.values(data.config?.provider || {})) {
+      for (const id of Object.keys(p.models || {})) all.push(id);
+    }
+    configModelIds = new Set(all);
+  } catch {}
+}
+
+async function retestInactive() {
+  const inactive = checkResults.filter(r => r.status === "inactive").map(r => r.model);
+  if (!inactive.length) return;
+  const prevSelection = selectedModels;
+  selectedModels = new Set(inactive);
+  try {
+    await startCheck(checkResults.filter(r => r.status === "active"));
+  } finally {
+    selectedModels = prevSelection;
+  }
+}
+
 function showProgressError(text) {
   progress.hidden = false;
   progress.classList.add("err");
@@ -537,6 +566,9 @@ function renderAll() {
   summary.innerHTML =
     `<span class="ok">${active.length} active</span> · <span class="bad">${inactive} inactive</span> · ${checkResults.length} total` +
     (fastest ? ` · fastest: <code>${esc(fastest.model)}</code> at ${fastest.latency_ms} ms` : "");
+  if (inactive && !checkBtn.disabled) {
+    summary.innerHTML += ` · <button type="button" class="chip" onclick="retestInactive()">Retest inactive (${inactive})</button>`;
+  }
 
   filtersEl.innerHTML = [
     ["all", "All", checkResults.length],
@@ -590,7 +622,7 @@ function renderTable() {
     }).join(" ") || "—";
     return `
     <tr class="result">
-      <td class="model">${esc(r.model)}</td>
+      <td class="model">${esc(r.model)}${configModelIds.has(r.model) ? ' <span class="badge ok" title="Already in opencode config">cfg</span>' : ""}</td>
       <td><span class="badge ${r.status === "active" ? "ok" : "bad"}">${r.status === "active" ? "Active" : "Inactive"}</span></td>
       <td>${r.latency_ms} ms${tokens}${runs}</td>
       <td>${ttft}</td>
