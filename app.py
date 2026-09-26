@@ -137,59 +137,70 @@ async def check_models(request: Request):
         async def test_model(model_id: str):
             nonlocal done_count
             async with semaphore:
-                payload = {
-                    "model": model_id,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": max_tokens,
-                }
-                if system:
-                    payload["system"] = system
-                resp_body = None
-                prompt_tokens = None
-                completion_tokens = None
-                start = time.monotonic()
-                try:
+                runs = max(1, min(int(body.get("runs", 1) or 1), 5))
+                probes = body.get("capabilities") or []
+                attempts = []
+                payload = {}
+                for _ in range(runs):
+                    payload = {
+                        "model": model_id,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": max_tokens,
+                        "stream": True,
+                        "stream_options": {"include_usage": True},
+                    }
+                    if system:
+                        payload["system"] = system
                     async with httpx.AsyncClient(timeout=None) as client:
-                        resp = await client.post(
-                            f"{endpoint}/v1/chat/completions",
-                            headers={**headers, "Content-Type": "application/json"},
-                            json=payload,
-                        )
-                        resp_body = resp.text[:200000]
-                        latency = int((time.monotonic() - start) * 1000)
-                        prompt_tokens = len(enc.encode(prompt))
-                        data = None
-                        try:
-                            data, streamed = parse_completion_response(resp.text)
-                        except Exception:
-                            data, streamed = None, None
-                        if data:
-                            try:
-                                usage = data.get("usage") or {}
-                                if usage.get("prompt_tokens") is not None:
-                                    prompt_tokens = usage["prompt_tokens"]
-                                elif usage.get("input_tokens") is not None:
-                                    prompt_tokens = usage["input_tokens"]
-                                if usage.get("completion_tokens") is not None:
-                                    completion_tokens = usage["completion_tokens"]
-                                elif usage.get("output_tokens") is not None:
-                                    completion_tokens = usage["output_tokens"]
-                                else:
-                                    content = streamed if streamed is not None else (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
-                                    completion_tokens = len(enc.encode(content))
-                            except Exception:
-                                pass
-                        resp.raise_for_status()
-                        done_count += 1
-                        tps = round(completion_tokens / (latency / 1000), 1) if completion_tokens is not None and latency else None
-                        log_call(model_id, payload, resp_body)
-                        return {"type": "result", "model": model_id, "status": "active", "latency_ms": latency, "tokens_per_sec": tps, "error": None, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
-                except Exception as e:
-                    latency = int((time.monotonic() - start) * 1000)
-                    done_count += 1
-                    err_msg = str(e)[:200]
-                    log_call(model_id, payload, resp_body, error=err_msg)
-                    return {"type": "result", "model": model_id, "status": "inactive", "latency_ms": latency, "tokens_per_sec": None, "error": err_msg, "progress": f"{done_count}/{total}", "request": payload, "response": resp_body, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
+                        r = await stream_completion(
+                            client, f"{endpoint}/v1/chat/completions", headers, payload)
+                        if not r["ok"] and r["retry_stream"]:
+                            plain = {k: v for k, v in payload.items()
+                                     if k not in ("stream", "stream_options")}
+                            r = await stream_completion(
+                                client, f"{endpoint}/v1/chat/completions", headers, plain)
+                    attempts.append(r)
+
+                ok_runs = [r for r in attempts if r["ok"]]
+                status = "active" if ok_runs else "inactive"
+                flaky = 0 < len(ok_runs) < runs
+                lats = sorted(r["latency_ms"] for r in ok_runs)
+                lat = lats[len(lats) // 2] if lats else (attempts[-1]["latency_ms"] if attempts else 0)
+                usage = ok_runs[-1]["usage"] if ok_runs else {}
+                prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens")) or len(enc.encode(prompt))
+                content = ok_runs[-1]["content"] if ok_runs else None
+                completion_tokens = usage.get("completion_tokens", usage.get("output_tokens"))
+                if completion_tokens is None and content:
+                    completion_tokens = len(enc.encode(content))
+                ttft = ok_runs[-1]["ttft_ms"] if ok_runs else None
+                if ttft is None:
+                    ttft = lat
+                tps = None
+                if completion_tokens is not None:
+                    gen_ms = max(ok_runs[-1]["latency_ms"] - (ok_runs[-1]["ttft_ms"] or 0), 1)
+                    tps = round(completion_tokens / (gen_ms / 1000), 1)
+                reasoning = any(r["reasoning"] for r in ok_runs)
+                caps = {}
+                if reasoning:
+                    caps["reasoning"] = True
+                if probes:
+                    async with httpx.AsyncClient(timeout=None) as client:
+                        caps.update(await run_probes(
+                            client, f"{endpoint}/v1/chat/completions", headers, model_id, probes))
+                error = None if ok_runs else (attempts[-1]["error"] if attempts else "no attempts")
+                done_count += 1
+                log_call(model_id, payload, content or "", error=error)
+                return {
+                    "type": "result", "model": model_id, "status": status,
+                    "flaky": flaky, "runs_ok": len(ok_runs), "runs_total": runs,
+                    "latency_ms": lat, "ttft_ms": ttft, "tokens_per_sec": tps,
+                    "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
+                    "capabilities": caps, "error": error,
+                    "progress": f"{done_count}/{total}",
+                    "request": {"model": model_id, "messages": payload["messages"],
+                                "max_tokens": max_tokens},
+                    "response": content,
+                }
 
         # Run tests concurrently, yield results as they complete
         tasks = {asyncio.create_task(test_model(m)): m for m in models}
