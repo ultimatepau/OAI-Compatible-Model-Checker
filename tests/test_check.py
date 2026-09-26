@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 
 import app as appmod
 
+REAL_CLIENT = httpx.AsyncClient  # captured before any monkeypatching
+
 SSE = (
     'data: {"choices":[{"delta":{"content":"Hello"}}]}\n'
     'data: {"choices":[{"delta":{"content":" world"}}],'
@@ -14,9 +16,8 @@ SSE = (
 
 
 def check(monkeypatch, tmp_path, handler, **extra):
-    real = httpx.AsyncClient
     monkeypatch.setattr(appmod.httpx, "AsyncClient",
-                        lambda **kw: real(transport=httpx.MockTransport(handler)))
+                        lambda **kw: REAL_CLIENT(transport=httpx.MockTransport(handler)))
     monkeypatch.setattr(appmod, "LOG_FILE", tmp_path / "checker.log")
     body = {"endpoint": "http://up", "models": ["m1"], "prompt": "hi", **extra}
     with TestClient(appmod.app) as c:
@@ -49,3 +50,38 @@ def test_check_inactive_and_capabilities(monkeypatch, tmp_path):
                  capabilities=["vision"])
     assert r["status"] == "inactive" and "boom" in r["error"]
     assert r["capabilities"] == {"vision": False}
+
+
+def test_check_survives_hostile_usage_and_bad_runs(monkeypatch, tmp_path):
+    hostile = ('data: {"choices":[{"delta":{"content":"ok"}}],"usage":'
+               '{"prompt_tokens":"<img src=x onerror=alert(1)>","completion_tokens":"abc"}}\n'
+               "data: [DONE]\n")
+    rs = check(monkeypatch, tmp_path, lambda req: httpx.Response(200, content=hostile),
+               models=["m1", "m2"], runs="abc")
+    assert [r["model"] for r in rs] == ["m1", "m2"] or {r["model"] for r in rs} == {"m1", "m2"}
+    for r in rs:
+        assert r["status"] == "active" and r["runs_total"] == 1
+        assert isinstance(r["prompt_tokens"], int) and isinstance(r["completion_tokens"], int)
+
+
+def test_check_reports_raw_error_body_and_plain_json_content(monkeypatch, tmp_path):
+    (r,) = check(monkeypatch, tmp_path, lambda req: httpx.Response(500, text="upstream exploded"))
+    assert r["status"] == "inactive" and r["response"] == "upstream exploded"
+    body = {"choices": [{"message": {"content": "plain hi"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 2}}
+    (r,) = check(monkeypatch, tmp_path, lambda req: httpx.Response(200, json=body))
+    assert r["response"] == "plain hi" and r["tokens_per_sec"] is not None
+
+
+def test_check_uses_finite_timeouts(monkeypatch, tmp_path):
+    seen = []
+    real = httpx.AsyncClient
+
+    def factory(**kw):
+        seen.append(kw.get("timeout"))
+        return real(transport=httpx.MockTransport(lambda req: httpx.Response(200, content=SSE)))
+    monkeypatch.setattr(appmod.httpx, "AsyncClient", factory)
+    monkeypatch.setattr(appmod, "LOG_FILE", tmp_path / "checker.log")
+    with TestClient(appmod.app) as c:
+        c.post("/api/check", json={"endpoint": "http://up", "models": ["m1"], "capabilities": ["vision"]})
+    assert seen and all(t is not None for t in seen)

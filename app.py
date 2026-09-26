@@ -78,6 +78,39 @@ def parse_completion_response(raw: str):
         data = {**data, "usage": usage}
     return data, content
 
+def _num(x):
+    """Numbers only: upstream usage values are untrusted (a string here would reach the UI)."""
+    return x if isinstance(x, (int, float)) and not isinstance(x, bool) else None
+
+
+def _text_of(data):
+    """Reply text from a plain (non-SSE) OpenAI or Anthropic completion body."""
+    if not isinstance(data, dict):
+        return None
+    choice = (data.get("choices") or [{}])[0]
+    text = ((choice if isinstance(choice, dict) else {}).get("message") or {}).get("content")
+    if isinstance(text, str) and text:
+        return text
+    blocks = data.get("content")
+    if isinstance(blocks, list):
+        return "".join(b.get("text", "") for b in blocks if isinstance(b, dict)) or None
+    return None
+
+
+def compute_tps(tokens, latency_ms, ttft_ms, streamed, floor_ms=50):
+    """Tokens/sec over the generation window; whole latency when not streamed or the window is degenerate."""
+    if tokens is None:
+        return None
+    latency_ms = max(latency_ms or 0, 1)
+    gen_ms = latency_ms - (ttft_ms or 0) if streamed else latency_ms
+    if gen_ms < floor_ms:  # proxy buffered the stream / endpoint ignored it
+        gen_ms = latency_ms
+    return round(tokens / (gen_ms / 1000), 1)
+
+
+TIMEOUT = httpx.Timeout(10.0, read=60.0)  # read = max silence between chunks
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return HTML_PATH.read_text(encoding="utf-8")
@@ -115,6 +148,10 @@ async def check_models(request: Request):
     max_tokens = body.get("max_tokens", 10)
     system = body.get("system", "")
     selected_models = body.get("models")
+    try:
+        runs = max(1, min(int(body.get("runs", 1) or 1), 5))
+    except (TypeError, ValueError):
+        runs = 1
 
     headers = {"Authorization": f"Bearer {api_key}"}
     semaphore = asyncio.Semaphore(5)
@@ -137,10 +174,8 @@ async def check_models(request: Request):
         done_count = 0
         all_results = []
 
-        async def test_model(model_id: str):
-            nonlocal done_count
+        async def _run_model(model_id: str):
             async with semaphore:
-                runs = max(1, min(int(body.get("runs", 1) or 1), 5))
                 probes = body.get("capabilities") or []
                 attempts = []
                 payload = {}
@@ -154,7 +189,7 @@ async def check_models(request: Request):
                     }
                     if system:
                         payload["system"] = system
-                    async with httpx.AsyncClient(timeout=None) as client:
+                    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
                         r = await stream_completion(
                             client, f"{endpoint}/v1/chat/completions", headers, payload)
                         if not r["ok"] and r["retry_stream"]:
@@ -170,40 +205,63 @@ async def check_models(request: Request):
                 lats = sorted(r["latency_ms"] for r in ok_runs)
                 lat = lats[len(lats) // 2] if lats else (attempts[-1]["latency_ms"] if attempts else 0)
                 usage = ok_runs[-1]["usage"] if ok_runs else {}
-                prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens")) or len(enc.encode(prompt))
+                prompt_tokens = _num(usage.get("prompt_tokens"))
+                if prompt_tokens is None:
+                    prompt_tokens = _num(usage.get("input_tokens"))
+                if prompt_tokens is None:
+                    prompt_tokens = len(enc.encode(prompt))
                 content = ok_runs[-1]["content"] if ok_runs else None
-                completion_tokens = usage.get("completion_tokens", usage.get("output_tokens"))
+                completion_tokens = _num(usage.get("completion_tokens"))
+                if completion_tokens is None:
+                    completion_tokens = _num(usage.get("output_tokens"))
                 if completion_tokens is None and content:
                     completion_tokens = len(enc.encode(content))
                 ttft = ok_runs[-1]["ttft_ms"] if ok_runs else None
                 if ttft is None:
                     ttft = lat
                 tps = None
-                if completion_tokens is not None:
-                    gen_ms = max(ok_runs[-1]["latency_ms"] - (ok_runs[-1]["ttft_ms"] or 0), 1)
-                    tps = round(completion_tokens / (gen_ms / 1000), 1)
+                if ok_runs:
+                    last = ok_runs[-1]
+                    tps = compute_tps(completion_tokens, last["latency_ms"], last["ttft_ms"], last["streamed"])
                 reasoning = any(r["reasoning"] for r in ok_runs)
                 caps = {}
                 if reasoning:
                     caps["reasoning"] = True
                 if probes:
-                    async with httpx.AsyncClient(timeout=None) as client:
+                    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
                         caps.update(await run_probes(
                             client, f"{endpoint}/v1/chat/completions", headers, model_id, probes))
                 error = None if ok_runs else (attempts[-1]["error"] if attempts else "no attempts")
-                done_count += 1
-                log_call(model_id, payload, content or "", error=error)
+                response = content if ok_runs else (attempts[-1].get("body") or error)
+                try:
+                    log_call(model_id, payload, response or "", error=error)
+                except Exception:
+                    pass  # a full disk must not take the check down
                 return {
                     "type": "result", "model": model_id, "status": status,
                     "flaky": flaky, "runs_ok": len(ok_runs), "runs_total": runs,
                     "latency_ms": lat, "ttft_ms": ttft, "tokens_per_sec": tps,
                     "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
                     "capabilities": caps, "error": error,
-                    "progress": f"{done_count}/{total}",
                     "request": {"model": model_id, "messages": payload["messages"],
                                 "max_tokens": max_tokens},
-                    "response": content,
+                    "response": response,
                 }
+
+        async def test_model(model_id: str):
+            nonlocal done_count
+            try:
+                result = await _run_model(model_id)
+            except Exception as e:  # one bad model must not kill the whole stream
+                result = {"type": "result", "model": model_id, "status": "inactive",
+                          "flaky": False, "runs_ok": 0, "runs_total": runs, "latency_ms": 0,
+                          "ttft_ms": None, "tokens_per_sec": None, "prompt_tokens": None,
+                          "completion_tokens": None, "capabilities": {},
+                          "error": f"internal error: {str(e)[:150]}", "request": None,
+                          "response": None}
+            done_count += 1
+            result["progress"] = f"{done_count}/{total}"
+            return result
 
         # Run tests concurrently, yield results as they complete
         tasks = {asyncio.create_task(test_model(m)): m for m in models}
@@ -345,6 +403,7 @@ async def stream_completion(client, url, headers, payload):
     data = None
     raw = ""
     got_sse = False
+    err = None
     stream_req = bool(payload.get("stream"))
     try:
         async with client.stream(
@@ -359,7 +418,7 @@ async def stream_completion(client, url, headers, payload):
                         "latency_ms": int((time.monotonic() - start) * 1000),
                         "ttft_ms": None, "content": None, "usage": {},
                         "streamed": False, "reasoning": False,
-                        "error": body[:200], "retry_stream": retry}
+                        "error": body[:200], "body": body, "retry_stream": retry}
             buf = ""
             async for chunk in resp.aiter_text():
                 raw = (raw + chunk)[:200000]
@@ -377,7 +436,11 @@ async def stream_completion(client, url, headers, payload):
                         cj = json.loads(s)
                     except Exception:
                         continue
+                    if not isinstance(cj, dict):
+                        continue
                     data = cj
+                    if cj.get("error"):
+                        err = cj["error"]
                     if cj.get("usage"):
                         usage = {**usage, **cj["usage"]}
                     ch = cj.get("choices") or []
@@ -405,9 +468,17 @@ async def stream_completion(client, url, headers, payload):
         if not got_sse:
             # Endpoint abaikan stream param dan balas JSON polos.
             data, content = parse_completion_response(raw)
+            content = content or _text_of(data)
             ttft = latency
-            if data and data.get("usage"):
-                usage = {**usage, **data["usage"]}
+            if isinstance(data, dict):
+                err = data.get("error")
+                if data.get("usage"):
+                    usage = {**usage, **data["usage"]}
+        if err:
+            msg = err.get("message") if isinstance(err, dict) else err
+            return {"ok": False, "status": 200, "latency_ms": latency, "ttft_ms": None,
+                    "content": None, "usage": {}, "streamed": got_sse, "reasoning": False,
+                    "error": str(msg or err)[:200], "body": raw, "retry_stream": False}
         return {"ok": True, "status": 200, "latency_ms": latency, "ttft_ms": ttft,
                 "content": content, "usage": usage, "streamed": got_sse,
                 "reasoning": reasoning, "error": None, "retry_stream": False}
@@ -434,9 +505,7 @@ def _judge_capability(kind, status, data, content):
         return any(isinstance(b, dict) and b.get("type") == "tool_use" for b in blocks)
     if kind == "json":
         if content is None:  # plain (non-SSE) body: parse_completion_response gives no text
-            msg = (data.get("choices") or [{}])[0].get("message", {})
-            content = msg.get("content") or "".join(
-                b.get("text", "") for b in data.get("content") or [] if isinstance(b, dict))
+            content = _text_of(data)
         try:
             json.loads(content or "")
             return True

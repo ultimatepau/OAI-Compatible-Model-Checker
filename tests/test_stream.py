@@ -44,3 +44,30 @@ def test_http_error_retry_hint():
     r = run_with(lambda request: httpx.Response(400, text="stream is not supported"))
     assert r["ok"] is False
     assert r["retry_stream"] is True
+
+
+def test_plain_json_content_is_extracted():
+    body = {"choices": [{"message": {"content": "hi"}}]}
+    assert run_with(lambda request: httpx.Response(200, json=body))["content"] == "hi"
+    anth = {"content": [{"type": "text", "text": "yo"}]}
+    assert run_with(lambda request: httpx.Response(200, json=anth))["content"] == "yo"
+
+
+def test_http_200_with_error_body_is_not_ok():
+    r = run_with(lambda request: httpx.Response(200, json={"error": {"message": "bad key"}}))
+    assert r["ok"] is False and "bad key" in r["error"]
+    sse = 'data: {"error": {"message": "overloaded"}}\n'
+    r = run_with(lambda request: httpx.Response(200, content=sse))
+    assert r["ok"] is False and "overloaded" in r["error"]
+
+
+def test_error_status_keeps_body():
+    r = run_with(lambda request: httpx.Response(500, text="upstream exploded"))
+    assert r["ok"] is False and r["body"] == "upstream exploded"
+
+
+def test_compute_tps_guards_against_zero_generation_window():
+    assert appmod.compute_tps(10, 800, 800, False) == 12.5    # non-stream: whole latency
+    assert appmod.compute_tps(10, 800, 799, True) == 12.5     # burst-buffered stream: below floor
+    assert appmod.compute_tps(10, 1000, 200, True) == 12.5    # real generation window 800 ms
+    assert appmod.compute_tps(None, 800, 200, True) is None
