@@ -227,10 +227,18 @@ async def check_models(request: Request):
                 caps = {}
                 if reasoning:
                     caps["reasoning"] = True
+                probe_details = {}
+
+                def log_probe(kind, probe_payload, text, reason):
+                    try:
+                        log_call(f"{model_id} [probe:{kind}]", probe_payload, text, error=reason)
+                    except Exception:
+                        pass
                 if probes:
                     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
                         caps.update(await run_probes(
-                            client, f"{endpoint}/v1/chat/completions", headers, model_id, probes))
+                            client, f"{endpoint}/v1/chat/completions", headers, model_id, probes,
+                            probe_details, log_probe))
                 error = None if ok_runs else (attempts[-1]["error"] if attempts else "no attempts")
                 response = content if ok_runs else (attempts[-1].get("body") or error)
                 try:
@@ -242,7 +250,7 @@ async def check_models(request: Request):
                     "flaky": flaky, "runs_ok": len(ok_runs), "runs_total": runs,
                     "latency_ms": lat, "ttft_ms": ttft, "tokens_per_sec": tps,
                     "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
-                    "capabilities": caps, "error": error,
+                    "capabilities": caps, "probe_details": probe_details, "error": error,
                     "request": {"model": model_id, "messages": payload["messages"],
                                 "max_tokens": max_tokens},
                     "response": response,
@@ -514,7 +522,21 @@ def _judge_capability(kind, status, data, content):
     return True  # vision: cukup HTTP 200
 
 
-async def run_probes(client, url, headers, model_id, kinds):
+def _probe_reason(kind, status, text, data):
+    if status >= 400:
+        return f"HTTP {status}: {text[:200]}"
+    if not data:
+        return "empty or unparseable response body"
+    if kind == "tools":
+        return "reply contained no tool call"
+    if kind == "json":
+        return "reply is not valid JSON"
+    return "unexpected response"
+
+
+async def run_probes(client, url, headers, model_id, kinds, details=None, log=None):
+    """Return {kind: bool}. Optionally fill details[kind] = {status, reason, body} and call
+    log(kind, payload, body, reason) so a red capability can be explained afterwards."""
     base = {"model": model_id, "max_tokens": 100}
     jobs = {
         "tools": {**base,
@@ -540,13 +562,22 @@ async def run_probes(client, url, headers, model_id, kinds):
         payload = jobs.get(kind)
         if not payload:
             continue
+        status, text, reason, ok = None, "", None, False
         try:
             resp = await client.post(url, headers={**headers, "Content-Type": "application/json"},
                                      json=payload)
+            status, text = resp.status_code, resp.text[:2000]
             data, content = parse_completion_response(resp.text)
-            out[kind] = _judge_capability(kind, resp.status_code, data, content)
-        except Exception:
-            out[kind] = False
+            ok = _judge_capability(kind, status, data, content)
+            if not ok:
+                reason = _probe_reason(kind, status, text, data)
+        except Exception as e:
+            reason = f"{type(e).__name__}: {e}"[:300]
+        out[kind] = ok
+        if details is not None:
+            details[kind] = {"status": status, "reason": reason, "body": text}
+        if log:
+            log(kind, payload, text, reason)
     return out
 
 

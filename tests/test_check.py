@@ -85,3 +85,16 @@ def test_check_uses_finite_timeouts(monkeypatch, tmp_path):
     with TestClient(appmod.app) as c:
         c.post("/api/check", json={"endpoint": "http://up", "models": ["m1"], "capabilities": ["vision"]})
     assert seen and all(t is not None for t in seen)
+
+
+def test_check_returns_probe_details_and_logs_probe_calls(monkeypatch, tmp_path):
+    def handler(req):
+        if b"image_url" in req.content:
+            return httpx.Response(400, text="no images please")
+        return httpx.Response(200, content=SSE)
+    (r,) = check(monkeypatch, tmp_path, handler, capabilities=["vision"])
+    assert r["capabilities"] == {"vision": False}
+    assert "no images please" in r["probe_details"]["vision"]["reason"]
+    lines = [json.loads(l) for l in (tmp_path / "checker.log").read_text().splitlines()]
+    probe = [l for l in lines if l["model"] == "m1 [probe:vision]"]
+    assert len(probe) == 1 and "no images please" in probe[0]["response"] and "no images please" in probe[0]["error"]

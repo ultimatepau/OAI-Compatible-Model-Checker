@@ -629,8 +629,16 @@ function renderTable() {
     const capsHtml = capKeys.map(k => {
       if (!(k in caps)) return "";
       const v = caps[k] ? "ok" : "bad";
-      return `<span class="capdot ${v}" title="${k}">●</span>`;
+      const why = !caps[k] && (r.probe_details || {})[k]?.reason;
+      return `<span class="capdot ${v}" title="${escAttr(why ? `${k}: ${why}` : k)}">●</span>`;
     }).join(" ") || "—";
+    const probes = Object.entries(r.probe_details || {});
+    const probesHtml = probes.length ? `
+          <div style="grid-column: 1 / -1">
+            <h4>Capability probes</h4>
+            <pre>${esc(probes.map(([k, d]) =>
+              `${k}: ${d.reason ? "FAIL — " + d.reason : "ok"} (HTTP ${d.status ?? "n/a"})` + (d.body ? `\n${d.body}` : "")).join("\n\n"))}</pre>
+          </div>` : "";
     return `
     <tr class="result">
       <td class="model">${esc(r.model)}${configModelIds.has(r.model) ? ' <span class="badge ok" title="Already in opencode config">cfg</span>' : ""}</td>
@@ -655,7 +663,7 @@ function renderTable() {
           <div>
             <h4>Response body</h4>
             <pre>${esc(formatJson(r.response))}</pre>
-          </div>
+          </div>${probesHtml}
         </div>
       </td>
     </tr>`;
@@ -974,6 +982,11 @@ function esc(s) {
   const d = document.createElement("div");
   d.textContent = s;
   return d.innerHTML;
+}
+
+// esc() leaves quotes alone; attribute values need them escaped too
+function escAttr(s) {
+  return esc(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 </script>
 </body>
